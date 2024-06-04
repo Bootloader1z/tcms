@@ -94,6 +94,7 @@ class DashboardController extends Controller
         ->selectRaw('GROUP_CONCAT(tas_files.case_no) as case_numbers')
         ->groupBy('tas_files.apprehending_officer', 'apprehending_officers.department')
         ->orderByDesc('total_cases')
+        ->take(20) 
         ->get();
 
 
