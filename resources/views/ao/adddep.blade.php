@@ -21,12 +21,12 @@
   @endif
     <div class="container-fluid"> <!-- Make the container wider -->
         <div class="row justify-content-center">
-            <div class="col-lg-8"> <!-- Adjusted the width of the column -->
+            <div class="col-lg-10"> <!-- Adjusted the width of the column -->
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Apprehending Officer</h5>
+                        <h5 class="card-title">Add Department</h5>
     
-                        <form method="POST" action="{{ route('save.offi') }}" class="row g-3 needs-validation" novalidate enctype="multipart/form-data">
+                        <form method="POST" action="{{ route('save.deps') }}" class="row g-3 needs-validation" novalidate enctype="multipart/form-data">
                             @csrf
                             
                             <div class="col-md-6 position-relative">

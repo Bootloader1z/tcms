@@ -42,25 +42,9 @@
                                         Please select a Department.
                                     </div>
                                     <option selected="selected" disabled="disabled" >Select Department</option>
-                                    <option value="CALAX">CALAX</option>
-                                    <option value="TPLEX">TPLEX</option>
-                                    <option value="DO MMDA">DO-MMDA</option>
-                                    <option value="DO-LES-FED">DO-LES-FED</option>
-                                    <option value="DO-NLEX">DO-NLEX</option>
-                                    <option value="DO-STARTOLL">DO-STARTOLL</option>
-                                    <option value="MCX">MCX</option>
-                                    <option value="NLEX">NLEX</option>
-                                    <option value="PCG">PCG</option>
-                                    <option value="SKYWAY">SKYWAY</option>
-                                    <option value="SLEX">SLEX</option>
-                                    <option value="STARTOLL">STARTOLL</option>
-                                    <option value="LES">LES</option>
-                                    <option value="MMDA">MMDA</option>
-                                    <option value="LTFRB">LTFRB</option>
-                                    <option value="SOMCO">SOMCO</option>
-                                    <option value="SAICT">SAICT</option>
-                                    <option value="MIAA">MIAA</option>
-                                    <!-- Add more options as needed -->
+                                    @foreach($departments as $department)
+                                    <option value="{{$department->department}}">{{$department->department}}</option>
+                                    @endforeach
                                 </select>
                                 
                             </div>

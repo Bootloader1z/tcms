@@ -44,6 +44,7 @@
                 <option value="0" >Employee View</option>
             </select>
         </div>
+        <a href="{{ route('profile.change', ['id' => $user->id]) }}" class="btn btn-success">Change Password</a>
         @else
 
         @endif

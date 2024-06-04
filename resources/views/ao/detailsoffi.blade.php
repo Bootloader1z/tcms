@@ -29,5 +29,16 @@
             <!-- Add more options as needed -->
         </datalist>
     </div>
-    <button type="submit" class="btn btn-primary">Update Officer</button>
+    <div class="mb-3">
+        <label for="statusis" class="form-label">Status</label>
+        <select class="form-control" id="statusis" name="statusis">
+            @if($officer->isactive == 1)
+                <option value="1" selected>Active</option>
+                <option value="0">Inactive</option>
+            @else
+                <option value="1">Active</option>
+                <option value="0" selected>Inactive</option>
+            @endif
+        </select>
+    </div>
 </form>

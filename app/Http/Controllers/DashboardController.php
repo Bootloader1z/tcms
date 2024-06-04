@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\ApprehendingOfficer;
 use App\Models\TrafficViolation;
-use App\Models\fileviolation;
+use App\Models\department;
 use App\Models\G5ChatMessage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\QueryException;
@@ -506,6 +507,29 @@ class DashboardController extends Controller
             return redirect()->back()->with('error', 'An error occurred: ' . $e->getMessage());
         }
     } 
+    public function updatePicture(Request $request, $id){
+        try {
+            $request->validate([
+                'profile_picture' => 'image|mimes:jpeg,png,jpg,gif|max:6144' // Adjust the validation rules as needed
+            ]);
+    
+            $user = User::findOrFail($id);
+    
+            if ($request->hasFile('profile_picture')) {
+                $image = $request->file('profile_picture');
+                $imageName = $user->username .'-dp.'.$image->getClientOriginalExtension();
+                $image->move(public_path('uploads'), $imageName);
+    
+                // Update the user's profile picture file path in the database
+                $user->profile_pic = 'uploads/' . $imageName; // Store the file path, not the file content
+                $user->save();
+            }
+    
+            return redirect()->back()->with('success', 'Profile picture uploaded successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'An error occurred while uploading the profile picture.');
+        }
+    }
     public function change($id){
         $user = User::findOrFail($id);
         return view('change_password', compact('user'));
@@ -513,13 +537,14 @@ class DashboardController extends Controller
     public function updatePassword(Request $request){
         try {
             $user = Auth::user();
-            if (!Hash::check($request->current_password, $user->password)) {
+            
+            if (!password_verify($request->current_password, Crypt::decryptString($user->password))) {
                 return back()->with('error', 'Current password does not match.');
             }
-
-            $user->password = Hash::make($request->new_password);
+    
+            $user->password = Crypt::encryptString($request->new_password);
             $user->save();
-
+    
             return back()->with('success', 'Password updated successfully.');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
@@ -587,19 +612,56 @@ class DashboardController extends Controller
         return view('ao.addvio');
     }
     public function officergg(){
-        return view('ao.addoffi');
+        $departments = department::all();
+        return view('ao.addoffi', compact('departments'));
     }    
     public function department(){
         return view('ao.adddep');
     }    
-    public function departmentsave(){
 
-        $officers = ApprehendingOfficer::orderBy('department', 'asc')->get();
 
-        // dd($officers[1]);
-        return view('ao.editoffi', compact('officers'));
+public function departmentsave(Request $request) {
+    try {
+        // Validate the request data
+        $request->validate([
+            'department' => 'required|string',
+        ]);
         
-    }    
+        // Check if the department already exists
+        $existingDepartment = Department::where('department', $request->input('department'))->first();
+        
+        if ($existingDepartment) {
+            return redirect()->back()->with('error', 'Department already exists');
+        }
+        
+        // Generate a random string
+        $randomString = Str::random(10);
+
+        // Begin a database transaction
+        DB::beginTransaction();
+
+        // Create a new Department instance
+        $department = new Department([
+            'dep_unique' => $randomString,
+            'department' => $request->input('department'),
+        ]);
+        $department->save();
+        DB::commit();
+        return redirect()->back()->with('success', 'Department created successfully');
+
+    } catch (\Exception $e) {
+        DB::rollback();
+        Log::error('Error creating Department: ' . $e->getMessage());
+        return redirect()->back()->with('error', 'Error creating Department: ' . $e->getMessage());
+    }
+}
+public function editdepp(){
+
+    $deps = Department::all();
+
+    // dd($officers[1]);
+    return view('ao.editdep', compact('deps'));
+}
     public function editoffi(){
 
         $officers = ApprehendingOfficer::all();
@@ -991,6 +1053,31 @@ if ($request->hasFile('file_attach_existing')) {
             // Update officer details
             $officer = ApprehendingOfficer::findOrFail($id);
             $officer->officer = $request->input('officer');
+            $officer->department = $request->input('department');
+            $officer->save();
+
+            // Redirect back with success message
+            return back()->with('success', 'Officer details updated successfully.');
+        } catch (ModelNotFoundException $e) {
+            // Handle case where officer with $id is not found
+            return back()->with('error', 'Officer not found.');
+        } catch (ValidationException $e) {
+            // Handle validation errors
+            return back()->withErrors($e->errors())->withInput();
+        } catch (\Throwable $e) {
+            // Handle other unexpected errors
+            return back()->with('error', 'Failed to update officer details. Please try again.');
+        }
+    }
+    public function updatedeps(Request $request, $id){
+        try {
+            // Validate incoming request
+            $request->validate([
+                'department' => 'required|string',
+            ]);
+
+            // Update officer details
+            $officer = department::findOrFail($id);
             $officer->department = $request->input('department');
             $officer->save();
 
