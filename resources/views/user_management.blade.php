@@ -1,3 +1,5 @@
+@if (Auth::check() && Auth::user()->role == 9)
+
 @include('layouts.title')
 <!-- Include jQuery from CDN -->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -7,7 +9,6 @@
     .table {
         table-layout: fixed;
     }
-
     .table td {
         white-space: initial; /* Change 'nowrap' to 'initial' to allow text to wrap */
         overflow: hidden; /* Prevent overflow */
@@ -17,12 +18,9 @@
 </style>
   <!-- Include Header -->
   @include('layouts.header')
-
   <!-- Include Sidebar -->
   @include('layouts.sidebar')
-
   <main id="main" class="main">
-  
     <div class="container">
         <div class="row">
             <div class="col-md-7">
@@ -55,8 +53,6 @@
                         <td>{{ $user->fullname }}</td>
                         <td>{{ $user->username }}</td>
                         <td>{{ $user->email }}</td>
-                        
-                        
                         <td>
                         <span class="password" data-password="{{ $user->decrypted_password }}"></span> 
                         </td>
@@ -77,15 +73,14 @@
                             @endif
                         </td>
                         <td>
-                            <a href="{{ route('users.edit', $user->id) }}" class="btn btn-sm btn-primary">Edit</a>
+                            <a href="{{ route('users.edit', $user->id) }}" class="btn btn-sm btn-primary">Edit Profile</a>
+                            <a href="{{ route('users.profile', $user->id) }}" class="btn btn-sm btn-primary mt-2">Show Profile</a>
                             <button class="toggle-password btn btn-sm btn-primary mt-2" data-visible="false">Show Password</button>
                             <form action="{{ route('users.destroy', $user) }}" method="POST" style="display: inline;">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-sm btn-danger mt-2"  onclick="return confirm('Are you sure?')">Delete</button>
-                                
                             </form>
-                            
                         </td>
                     </tr>
                     @endforeach
@@ -93,7 +88,6 @@
             </table>
         </div>
     </div>
-
     <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -146,20 +140,16 @@
                         </div>
                         <button type="button" id="addUserBtn" class="btn btn-primary">Add User</button>
                     </form>
-                                 
                 </div>
             </div>
         </div>
     </div>
-    
 </main>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-
 <script>
     $(document).ready(function() {
         $("#addUserBtn").click(function(event) {
             event.preventDefault();
-
             // Validation for required fields
             if ($("#fullname").val() === '' || $("#username").val() === '' || $("#email").val() === '' || $("#password").val() === '' || $("#role").val() === '') {
                 if ($("#fullname").val() === '') {
@@ -184,7 +174,6 @@
                 }
                 return false;
             }
-
             var formData = {
                 fullname: $("#fullname").val(),
                 username: $("#username").val(),
@@ -193,7 +182,6 @@
                 role: $("#role").val(),
                 _token: $('input[name="_token"]').val()
             };
-
             $.ajax({
                 url: "{{route('store.user')}}",
                 type: 'POST',
@@ -210,7 +198,6 @@
                 }
             });
         });
-
         // Clear validation classes and messages on focus
         $("#fullname, #username, #email, #password, #role").focus(function() {
             $(this).removeClass("is-invalid").next(".invalid-tooltip").text("");
@@ -226,12 +213,9 @@ $(document).ready(function() {
         var asterisks = "*".repeat(password.length);
         passwordSpan.text(asterisks);
     });
-
     $(".toggle-password").click(function() {
         var passwordSpan = $(this).closest("tr").find(".password");
         var visible = $(this).data("visible");
-        
-
         if (visible === "true") {
             var asterisks = "*".repeat(passwordSpan.data("password").length);
             passwordSpan.text(asterisks);
@@ -246,15 +230,11 @@ $(document).ready(function() {
     });
 });
 </script>
-
-
-
-
-
-
-
   <!-- Include Footer -->
   @include('layouts.footer')
 </body>
 
 </html>
+@else
+<script>window.location = '{{route('dashboard')}}';</script>
+@endif

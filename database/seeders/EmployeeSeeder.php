@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
+use App\Models\department;
 use App\Models\ApprehendingOfficer; // Assuming your model is officerd Employee
 
 class EmployeeSeeder extends Seeder
@@ -618,6 +620,37 @@ class EmployeeSeeder extends Seeder
             ApprehendingOfficer::create([
                 'officer' => $slex,
                 'department' => $department,
+            ]);
+        }
+         $departments = [
+            'CALAX',
+            'TPLEX',
+            'DO MMDA',
+            'DO-LES-FED',
+            'DO-NLEX',
+            'DO-STARTOLL',
+            'MCX',
+            'NLEX',
+            'PCG',
+            'SKYWAY',
+            'SLEX',
+            'STARTOLL',
+            'LES',
+            'MMDA',
+            'LTFRB',
+            'SOMCO',
+            'SAICT',
+            'MIAA',
+        ];
+        
+        foreach ($departments as $department) {
+            $randomstr = str::random(10);
+            department::create([
+                'dep_unique' => $randomstr,
+                'department' => $department,
+                // Add other columns if needed
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
         }
     }

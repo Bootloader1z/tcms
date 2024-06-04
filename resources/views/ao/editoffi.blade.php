@@ -34,6 +34,7 @@
                         <tr>
                             <th scope="col">Apprehending Officer</th>
                             <th scope="col">Department</th>
+                            <th scope="col">Status</th>
                         </tr>
                     </thead>
                     <!-- Table body -->
@@ -42,6 +43,11 @@
                         <tr data-bs-toggle="modal" data-bs-target="#exampleModal{{ $officer->id }}">
                             <td>{{ $officer->officer ?? 'N/A' }}</td>
                             <td>{{ $officer->department ?? 'N/A'  }}</td>
+                            @if ($officer->isactive == 1)
+                            <td>Active</td>
+                            @else
+                            <td>Inactive</td>
+                            @endif
                         </tr>
                         @endforeach
                     </tbody>

@@ -113,14 +113,30 @@
   
 
         <li class="nav-item dropdown pe-3">
-
+          <style>
+            .profile-pic {
+              width: 100px;
+              height: 100px;
+              border-radius: 50%;
+              object-fit: cover;
+            }
+          </style>
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-            <img src="{{ asset('assets/img/pzpx.png') }}" alt="Profile" class="rounded-circle">
+            @if(Auth::user()->profile_pic)
+                <img src="{{ asset(Auth::user()->profile_pic) }}" alt="User's Profile Picture" class="profile-pic" style="width: 50px; height: 50px;">
+            @else
+                <img src="{{ asset('assets/img/pzpx.png') }}" alt="Default User Image" style="width: 100px; height: auto; border-radius: 50%;">
+            @endif
             <span class="d-none d-md-block dropdown-toggle ps-2">{{Auth::user()->fullname}}</span>
           </a><!-- End Profile Iamge Icon -->
 
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
             <li class="dropdown-header">
+              @if(Auth::user()->profile_pic)
+                <img src="{{ asset(Auth::user()->profile_pic) }}" alt="User's Profile Picture" class="profile-pic" style="width: 100px; height: 100px;">
+              @else
+                  <img src="{{ asset('assets/img/pzpx.png') }}" alt="Default User Image" style="width: 100px; height: auto; border-radius: 50%;">
+              @endif
               <h6>{{Auth::user()->fullname}}</h6>
               @if (Auth::user()->role == 9)
                   <span>Administrator</span>
@@ -137,12 +153,14 @@
                 <span>My Profile</span>
               </a>
             </li>
+            @if (Auth::user()->role == 9)
             <li>
               <a class="dropdown-item d-flex align-items-center" href="{{route('user_management')}}">
                 <i class="bi bi-person-fill-add"></i>
                 <span>User Management</span>
               </a>
             </li>
+            @endif
             <li>
               <a class="dropdown-item d-flex align-items-center" href="{{route('logout')}}">
                 <i class="bi bi-box-arrow-right"></i>

@@ -61,18 +61,22 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/violation', [DashboardController::class, 'violationadd'])->name('see.vio');
     Route::post('/violation/save.violation', [DashboardController::class, 'addvio'])->name('add.violation');
     Route::get('/department/', [DashboardController::class, 'department'])->name('see.dep');
-    Route::post('/department/save.department', [DashboardController::class, 'addvio'])->name('add.violation');
+    
+    Route::post('/department/save.department', [DashboardController::class, 'departmentsave'])->name('save.deps');
+    Route::get('/department/edit', [DashboardController::class, 'editdepp'])->name('edit.deps');
     Route::get('/editofficer', [DashboardController::class, 'editoffi'])->name('edit.offi');
     Route::post('/admit-remarks', [DashboardController::class, 'admitremark'])->name('admitremark');
     Route::post('/viewTAS/save-remarks', [DashboardController::class, 'saveRemarks'])->name('save.remarks');
     Route::get('/getChartData', [DashboardController::class, 'getChartData']);
-    Route::get('/{id}/profile', [DashboardController::class, 'profile'])->name('profile');
-    Route::get('/{id}/profile/edit', [DashboardController::class, 'edit'])->name('profile.edit');
-    Route::put('/{id}/profile/update', [DashboardController::class, 'update'])->name('profile.update');
-    Route::get('/{id}/profile/change_password', [DashboardController::class, 'change'])->name('profile.change');
-    Route::post('/{id}/profile/update_password', [DashboardController::class, 'updatePassword'])->name('profile.update_password');
+    Route::get('users/{id}/profile', [DashboardController::class, 'profile'])->name('profile');
+    Route::get('users/{id}/profile/edit', [DashboardController::class, 'edit'])->name('profile.edit');
+    Route::put('users/{id}/profile/update', [DashboardController::class, 'update'])->name('profile.update');
+    Route::get('users/{id}/profile/change_password', [DashboardController::class, 'change'])->name('profile.change');
+    Route::post('users/{id}/profile/update_password', [DashboardController::class, 'updatePassword'])->name('profile.update_password');
+    Route::post('users/{id}/profile/profile.picture.save', [DashboardController::class, 'updatePicture'])->name('profile.picture.upload');
     Route::get('/manage-user', [DashboardController::class, 'management'])->name('user_management');
     Route::get('/manage-user/users/{id}/edit', [DashboardController::class, 'edit'])->name('users.edit');
+    Route::get('/manage-user/users/{id}/profile', [DashboardController::class, 'profile'])->name('users.profile');
     Route::delete('/manage-user/users/{user}', [DashboardController::class, 'userdestroy'])->name('users.destroy');
     Route::get('/manage-user/add-user', [DashboardController::class, 'add_user'])->name('add.user');
     Route::post('/manage-user/store-user', [DashboardController::class, 'store_user'])->name('store.user');
@@ -90,6 +94,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/update-status/{id}', [DashboardController::class, 'updateStatus'])->name('update.status');
     Route::post('/finish-case/{id}', [DashboardController::class, 'finishCase'])->name('finish.case');
     Route::put('/officers/{id}', [DashboardController::class, 'updateoffi'])->name('officers.update');
+    Route::put('/department/{id}', [DashboardController::class, 'updatedeps'])->name('deps.update');
     Route::put('/edit/{id}/violation', [DashboardController::class, 'updateviolation'])->name('edit.violation');
     Route::get('/edit/violation', [DashboardController::class, 'edivio'])->name('edit.vio');
 

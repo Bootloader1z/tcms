@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class ApprehendingOfficer extends Model
 {
     protected $table = 'apprehending_officers';
-    protected $fillable = ['officer','department'];
+    protected $fillable = ['officer','department','isactive'];
     public function tasFiles()
     {
         return $this->belongsToMany(TasFile::class, 'apprehending_officer');
