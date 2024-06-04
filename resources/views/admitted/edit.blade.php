@@ -48,7 +48,7 @@
     <thead class="thead-dark">
         <tr>
             <th scope="col">Record Status</th>
-            <th scope="col">Case No.</th>
+            <th scope="col">Admitted No</th>
             <th scope="col">TOP</th>
             <th scope="col">Driver</th>
             <th scope="col">Apprehending Officer</th>
@@ -76,7 +76,7 @@
                     <span class="text-white"><i class="bi bi-question-circle-fill"></i> Incomplete</span>
                 @endif
             </td>
-            <td class="align-middle">{{ $violation->case_no }}</td>
+            <td class="align-middle">{{ $violation->admittedno }}</td>
             <td class="align-middle">{{ $violation->top }}</td>
             <td class="align-middle">{{ $violation->driver }}</td>
             <td class="align-middle">{{ $violation->apprehending_officer }}</td>
@@ -142,8 +142,8 @@
     <div class="col-md-6">
         <!-- Case No. -->
         <div class="mb-3">
-            <label for="resolutionNo{{ $violation->id }}" class="form-label">Case No.</label>
-            <input type="text" class="form-control" id="resolutionNo{{ $violation->id }}" name="case_no" value="{{ $violation->case_no }}">
+            <label for="resolutionNo{{ $violation->id }}" class="form-label">Admitted No</label>
+            <input type="text" class="form-control" id="resolutionNo{{ $violation->id }}" name="admittedno" value="{{ $violation->admittedno }}">
         </div>
         <!-- TOP -->
         <div class="mb-3">

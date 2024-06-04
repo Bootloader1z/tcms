@@ -58,7 +58,7 @@
                         </div>
                         <div class="col-md-6">
                             <label for="validationTooltipCaseno" class="form-label">Case no.</label>
-                            <input type="number" name="case_no" class="form-control" id="validationTooltipCaseno" min="1" max="9999999" required>
+                            <input type="text" name="case_no" class="form-control" id="validationTooltipCaseno"  required>
                             <div class="invalid-tooltip">
                                 Please enter a valid Case no. (Number only)
                             </div>

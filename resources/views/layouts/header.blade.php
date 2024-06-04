@@ -112,20 +112,12 @@
 
   
 
-        <li class="nav-item dropdown pe-3">
-          <style>
-            .profile-pic {
-              width: 100px;
-              height: 100px;
-              border-radius: 50%;
-              object-fit: cover;
-            }
-          </style>
+        <li class="nav-item dropdown pe-4">
           <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
             @if(Auth::user()->profile_pic)
-                <img src="{{ asset(Auth::user()->profile_pic) }}" alt="User's Profile Picture" class="profile-pic" style="width: 50px; height: 50px;">
+                <img src="{{ asset(Auth::user()->profile_pic) }}" alt="User's Profile Picture" class="nav-link nav-profile d-flex align-items-center pe-0" style="width: 50px; height: 50px; border-radius: 50%;">
             @else
-                <img src="{{ asset('assets/img/pzpx.png') }}" alt="Default User Image" style="width: 100px; height: auto; border-radius: 50%;">
+                <img src="{{ asset('assets/img/pzpx.png') }}" alt="Default User Image" style="width: 50px; height: auto; border-radius: 50%;">
             @endif
             <span class="d-none d-md-block dropdown-toggle ps-2">{{Auth::user()->fullname}}</span>
           </a><!-- End Profile Iamge Icon -->

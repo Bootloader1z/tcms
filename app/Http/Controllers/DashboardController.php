@@ -226,7 +226,7 @@ class DashboardController extends Controller
     }
     public function admitview(){
         // Retrieve admitted data
-        $admitted = Admitted::all()->sortByDesc('resolution_no');
+        $admitted = Admitted::all()->sortByDesc('admittedno');
 
         foreach ($admitted as $admit) {
             $violations = json_decode($admit->violation);
@@ -244,7 +244,7 @@ class DashboardController extends Controller
         }
 
         $pageSize = 15; // Define the default page size
-        $admitted = Admitted::all()->sortByDesc('resolution_no');
+        $admitted = Admitted::all()->sortByDesc('admittedno');
         $officers = collect();
         
         foreach ($admitted as $admit) {
@@ -410,7 +410,7 @@ class DashboardController extends Controller
          try {
             $validatedData = $request->validate([
                 'top' => 'nullable|string',
-                'resolution_no' => 'nullable|string',
+                'admittedno' => 'nullable|string',
                 'driver' => 'required|string',
                 'apprehending_officer' => 'required|string',
                 'violation' => 'required|string',
@@ -423,10 +423,10 @@ class DashboardController extends Controller
             ]);
             DB::beginTransaction();
             $currentYear = date('Y');
-            $existingadmitted = admitted::where('resolution_no', $validatedData['resolution_no'])->first();
+            $existingadmitted = admitted::where('admittedno', $validatedData['admittedno'])->first();
             if (!$existingadmitted) {
                 $admitted = new admitted([
-                    'resolution_no' => 'CS-' . $currentYear .'-'. $validatedData['resolution_no'],
+                    'admittedno' => 'CS-' . $currentYear .'-'. $validatedData['admittedno'],
                     'top' => $validatedData['top'],
                     'driver' => $validatedData['driver'],
                     'apprehending_officer' => $validatedData['apprehending_officer'],
@@ -442,7 +442,7 @@ class DashboardController extends Controller
                     $filePaths = [];
                     $cx = 1;
                     foreach ($request->file('file_attachment') as $file) {
-                        $x = $validatedData['resolution_no'] . "_documents_" . $cx . "_";
+                        $x = $validatedData['admittedno'] . "_documents_" . $cx . "_";
                         $fileName = $x . time();
                         $file->storeAs('attachments', $fileName, 'public');
                         $filePaths[] = 'attachments/' . $fileName;
@@ -1007,7 +1007,7 @@ if ($request->hasFile('file_attach_existing')) {
         
         
         // Fetch recent TasFiles ordered by case number descending
-        $recentViolationsToday = Admitted::all()->sortByDesc('resolution_no');
+        $recentViolationsToday = Admitted::all()->sortByDesc('admittedno');
         
         // Fetch all codes (assuming TrafficViolation model provides codes)
         $codes = TrafficViolation::all();
@@ -1049,12 +1049,14 @@ if ($request->hasFile('file_attach_existing')) {
             $request->validate([
                 'officer' => 'required|string',
                 'department' => 'required|string',
+                'statusis' => 'required|string',
             ]);
 
             // Update officer details
             $officer = ApprehendingOfficer::findOrFail($id);
             $officer->officer = $request->input('officer');
             $officer->department = $request->input('department');
+            $officer->isactive = $request->input('statusis');
             $officer->save();
 
             // Redirect back with success message

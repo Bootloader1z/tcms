@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('admitteds', function (Blueprint $table) {
             $table->id();
-            $table->string('resolution_no')->nullable();
+            $table->string('admittedno')->nullable();
             $table->string('top')->nullable();
             $table->string('apprehending_officer')->nullable();
             $table->string('driver')->nullable();

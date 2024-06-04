@@ -38,7 +38,7 @@
                     <thead class="thead-light">
                         <tr>
                             <th>Record Status</th>
-                            <th>Resolution No.</th>
+                            <th>Admitted No</th>
                             <th>Transaction No</th>
                             <th>Top</th>
                             <th>Driver</th>
@@ -73,7 +73,7 @@
 
 
 
-                            <td>{{ $admit->case_no  ?? 'N/A' }}</td>
+                            <td>{{ $admit->admittedno  ?? 'N/A' }}</td>
                             <td>{{ $admit->transaction_no ?? 'N/A' }}</td>
                             <td>{{ $admit->top ?? 'N/A' }}</td>
                             <td>{{ $admit->driver  ?? 'N/A' }}</td>

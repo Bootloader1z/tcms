@@ -57,10 +57,10 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <label for="validationTooltipresolutionno" class="form-label">Resolution No.</label>
-                            <input type="number" name="resolution_no" class="form-control" id="validationTooltipresolutionno" min="1" max="9999999" required>
+                            <label for="validationTooltipresolutionno" class="form-label">Admitted No</label>
+                            <input type="text" name="admittedno" class="form-control" id="validationTooltipresolutionno" required>
                             <div class="invalid-tooltip">
-                                Please enter a valid Resolution No. (Number only)
+                                Please enter a valid Admitted No. (Number only)
                             </div>
                         </div>
                         <div class="col-md-6">

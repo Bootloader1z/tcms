@@ -29,8 +29,8 @@
             </div>
             <div class="card-body mt-3">
                 <div class="mb-4">
-                    <h6 class="text-muted">Resolution No:</h6>
-                    <p class="fw-bold">{{ $admitted->resolution_no }}</p>
+                    <h6 class="text-muted">Admitted No:</h6>
+                    <p class="fw-bold">{{ $admitted->admittedno }}</p>
                 </div>
                 <hr>
                 <div class="mb-4">
