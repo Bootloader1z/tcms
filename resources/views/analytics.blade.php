@@ -5,21 +5,7 @@
 @include('layouts.title')
 
 <body>
-    <style>
-        /* Hide the spinner arrows for number input */
-        input[type="number"] {
-            -moz-appearance: textfield; /* Firefox */
-        }
-    
-        input[type="number"]::-webkit-outer-spin-button,
-        input[type="number"]::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        .capitalize {
-    text-transform: uppercase;
-    }
-    </style>
+  
   <!-- ======= Header ======= -->
 @include('layouts.header')
 
@@ -39,51 +25,64 @@
 @endif
 
 <!-- Button to trigger modal -->
-<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#chartModal">
-  Contested Case Monthly Comparison
-</button>
-
-<!-- Modal -->
-<div class="modal fade" id="chartModal" tabindex="-1" aria-labelledby="chartModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="chartModalLabel">Contested Case Monthly Comparison Chart</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="container-fluid">
+  <div class="row justify-content-center">
+      <div class="col-lg-8">
+          <div class="card">
+              <div class="card-body">
+                <h5 class="card-title">Months Report</h5>
+                  <!-- Form Start -->
+                  <form action="{{ route('filterByMonth') }}" method="get" target="_blank" class="row g-3 needs-validation" novalidate>
+                    @csrf <!-- CSRF protection -->
+          
+                    <div class="col-md-6">
+                        <label for="validationTooltipdate" class="form-label">Date</label>
+                        <input type="month" name="date_received" class="form-control" id="validationTooltipdate" required>
+                        <div class="invalid-tooltip">
+                            Please input date.
+                        </div>
+                    </div>
+                    <div class="col-12">
+                      <button class="btn btn-primary" type="submit">Submit form</button>
+                  </div>
+                </form>
+                  <!-- Form End -->
+              </div>
+          </div>
       </div>
-      <div class="modal-body">
-        <div id="monthlyChart" style="width: 100%; height: 400px;"></div>
-      </div>
-    </div>
   </div>
-</div>
+{{-- </div>
+<section class="mt-3">
+  <div class="form-container">
+      
+  </div>
+</section> --}}
 
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    // Get data from the PHP variable passed from the controller
-    const months = @json($months);
-    const counts = @json($counts);
-    const backgroundColors = @json($backgroundColors);
-
-    // Render the chart using ApexCharts
-    const options = {
-      chart: {
-        type: 'pie',
-      },
-      series: counts,
-      labels: months,
-      colors: backgroundColors,
-    };
-
-    const monthlyChart = new ApexCharts(document.querySelector("#monthlyChart"), options);
-    monthlyChart.render();
-  });
-</script>
 
 
   </main><!-- End #main -->
 
  @include('layouts.footer')
 </body>
+<script>
+  (function () {
+      'use strict'
 
+      // Fetch all the forms we want to apply custom Bootstrap validation styles to
+      var forms = document.querySelectorAll('.needs-validation')
+
+      // Loop over them and prevent submission
+      Array.prototype.slice.call(forms)
+          .forEach(function (form) {
+              form.addEventListener('submit', function (event) {
+                  if (!form.checkValidity()) {
+                      event.preventDefault()
+                      event.stopPropagation()
+                  }
+
+                  form.classList.add('was-validated')
+              }, false)
+          })
+  })()
+</script>
 </html>

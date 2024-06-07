@@ -8,20 +8,21 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Crypt;
-use App\Models\TasFile;
-use App\Models\admitted;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
+use App\Models\TasFile;
+use App\Models\admitted;
 use App\Models\ApprehendingOfficer;
 use App\Models\TrafficViolation;
 use App\Models\department;
 use App\Models\G5ChatMessage;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Database\QueryException;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
+use App\Models\archives;
 use DateTime;
 
 
@@ -179,6 +180,37 @@ class DashboardController extends Controller
     public function caseIndex(){
         return view('case_archives');
     }
+    public function reportsview(Request $request){
+        // Get the month parameter from the request, default to current month if not provided
+    $selectedMonth = $request->input('date_received', Carbon::now()->format('Y-m'));
+
+    // Determine the start and end dates of the selected month
+    $startDate = Carbon::parse($selectedMonth . '-01')->startOfMonth();
+    $endDate = Carbon::parse($selectedMonth . '-01')->endOfMonth();
+
+    // Query TasFiles with date range
+    $tasFiles = TasFile::whereBetween('date_received', [$startDate, $endDate])->get();
+
+    // Process each TasFile to attach related violations
+    foreach ($tasFiles as $tasFile) {
+        $violations = json_decode($tasFile->violation);
+        if ($violations) {
+            if (is_array($violations)) {
+                $relatedViolations = TrafficViolation::whereIn('code', $violations)->get();
+            } else {
+                $relatedViolations = TrafficViolation::where('code', $violations)->get();
+            }
+        } else {
+            $relatedViolations = collect(); // Empty collection if no violations
+        }
+        $tasFile->relatedViolations = $relatedViolations;
+    }
+
+    // Format monthYear based on the selected month
+    $monthYear = strtoupper(Carbon::parse($selectedMonth)->format('F Y'));
+
+    return view('sub.reports', ['tasFiles' => $tasFiles, 'monthYear' => $monthYear]);
+    }
     public function tasView(){
         $pageSize = 15; // Define the default page size
         $tasFiles = TasFile::all()->sortByDesc('case_no');
@@ -313,11 +345,11 @@ class DashboardController extends Controller
     public function admitremark(Request $request){
         $request->validate([
             'remarks' => 'required|string',
-            'tas_file_id' => 'required|exists:tas_files,id',
+            'admitted_dataid' => 'required|exists:admitteds,id',
         ]);
     
         try {
-            $id = $request->input('tas_file_id');
+            $id = $request->input('admitted_dataid');
             $remarks = $request->input('remarks');
             $tasFile = admitted::findOrFail($id);
             $existingRemarks = json_decode($tasFile->remarks, true) ?? [];
@@ -404,7 +436,475 @@ class DashboardController extends Controller
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
+ ///////////////////////////////////////////////////=============================================================================================================================       
+ ///////////////////////////////////////////////////=============================================================================================================================    
+ ///////////////////////////////////////////////////=============================================================================================================================    
+ ///////////////////////////////////////////////////=============================================================================================================================    
+ ///////////////////////////////////////////////////=============================================================================================================================    
+ ///////////////////////////////////////////////////=============================================================================================================================    
+ ///////////////////////////////////////////////////=============================================================================================================================   
+ ///////////////////////////////////////////////////////=============================================================================================================================
+    public function archivesmanage(){
+        $officers = ApprehendingOfficer::select('officer', 'department')->get();
+        // dd($recentViolationsToday[1]);
+        $violations = TrafficViolation::orderBy('code', 'asc')->get();
+        return view('case_archive.manage',compact('officers','violations'));
+    }
+    public function archivessubmit(Request $request){
+        try {
+            $validatedData = $request->validate([
+                'tas_no' => 'required|string',
+                'top' => 'nullable|string',
+                'driver' => 'required|string',
+                'apprehending_officer' => 'required|string',
+                'violation' => 'required|string',
+                'transaction_no' => 'nullable|string',
+                'date_received' => 'required|date',
+                'contact_no' => 'required|string',
+                'plate_no' => 'required|string',
+                'status' => 'required|string|in:closed,in-progress,settled,unsettled',
+                'file_attachment' => 'nullable|array',
+                'file_attachment.*' => 'nullable|file|max:512000',
+                'typeofvehicle' => 'required|string', // Add validation for typeofvehicle
+            ]);
 
+            DB::beginTransaction();
+
+            $existingarchive = archives::where('tas_no', $validatedData['tas_no'])->first();
+
+            if (!$existingarchive) {
+                $archive = new archives([
+                    'tas_no' => $validatedData['tas_no'],
+                    'top' => $validatedData['top'],
+                    'driver' => $validatedData['driver'],
+                    'apprehending_officer' => $validatedData['apprehending_officer'],
+                    'violation' => json_encode(explode(', ', $validatedData['violation'])),
+                    'transaction_no' => $validatedData['transaction_no'] ? "TRX-LETAS-" . $validatedData['transaction_no'] : null,
+                    'plate_no' => $validatedData['plate_no'],
+                    'date_received' => $validatedData['date_received'],
+                    'contact_no' => $validatedData['contact_no'],
+                    'status' => $validatedData['status'],
+                    'typeofvehicle' => $validatedData['typeofvehicle'], // Add typeofvehicle field to be saved
+                ]);
+
+                if ($request->hasFile('file_attachment')) {
+                    $filePaths = [];
+                    $cx = 1;
+                    foreach ($request->file('file_attachment') as $file) {
+                        $x = "CS-".$validatedData['tas_no'] . "_documents_" . $cx . "_";
+                        $fileName = $x . time();
+                        $file->storeAs('attachments', $fileName, 'public');
+                        $filePaths[] = 'attachments/' . $fileName;
+                        $cx++;
+                    }
+                    $archive->file_attach = json_encode($filePaths);
+                }
+
+                $archive->save();
+            } else {
+                return redirect()->back()->with('error', 'tas no. already exists.');
+            }
+
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Form submitted successfully!');
+        } catch (ValidationException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+    public function archivesview(){
+        $pageSize = 15; // Define the default page size
+        $archives = archives::all()->sortByDesc('case_no');
+        $officers = collect();
+        
+        foreach ($archives as $archive) {
+            $officerName = $archive->apprehending_officer;
+            $officersForFile = ApprehendingOfficer::where('officer', $officerName)->get();
+            $officers = $officers->merge($officersForFile);
+            $archive->relatedofficer = $officersForFile;
+            
+            if (is_string($archive->remarks)) {
+                $remarks = json_decode($archive->remarks, true);
+                if ($remarks === null) {
+                    $remarks = [];
+                }
+            } else if (is_array($archive->remarks)) {
+                $remarks = $archive->remarks;
+            } else {
+                $remarks = [];
+            }
+            $archive->remarks = $remarks;
+
+            $violations = json_decode($archive->violation);
+            if ($violations) {
+                if (is_array($violations)) {
+                    $relatedViolations = TrafficViolation::whereIn('code', $violations)->get();
+                } else {
+                    $relatedViolations = TrafficViolation::where('code', $violations)->get();
+                }
+            } else {
+                $relatedViolations = [];
+            }
+            $archive->relatedViolations = $relatedViolations;
+        }
+
+        return view('case_archive.view', compact('archives'));
+    }
+    public function saveRemarksarchives(Request $request) {
+        $request->validate([
+            'remarks' => 'required|string',
+            'archives_dataid' => 'required|exists:archives,id',
+        ]);
+    
+        try {
+            $id = $request->input('archives_dataid');
+            $remarks = $request->input('remarks');
+            $archives = archives::findOrFail($id);
+            $existingRemarks = json_decode($archives->remarks, true) ?? [];
+            $timestamp = Carbon::now('Asia/Manila')->format('g:ia m/d/y');
+            $newRemark = $remarks . ' - ' . $timestamp .' - '. Auth::user()->fullname;
+            $existingRemarks[] = $newRemark;
+            $updatedRemarksJson = json_encode($existingRemarks);
+    
+            DB::beginTransaction();
+            $archives->update(['remarks' => $updatedRemarksJson]);
+            DB::commit();
+    
+            // Send back a response with 201 Created status code
+            // Here, we are also returning a success message in the response body
+            return response()->json(['message' => 'Remarks saved successfully.'], 201);
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            logger()->error('Error saving remarks: ' . $th->getMessage());
+            return response()->json(['error' => $th->getMessage()], 500); // You can return a different error status code if needed
+        }
+    }
+    public function detailsarchives(Request $request, $id){
+        try {
+            // Find the archives by its ID or throw a ModelNotFoundException
+            $archives = archives::findOrFail($id);
+
+            // Retrieve related ApprehendingOfficers
+            $relatedOfficers = ApprehendingOfficer::where('officer', $archives->apprehending_officer)->get();
+
+            // Retrieve related TrafficViolations
+            $violations = json_decode($archives->violation, true);
+            $relatedViolations = [];
+            if ($violations) {
+                $relatedViolations = TrafficViolation::whereIn('code', $violations)->get();
+            }
+            
+            $remarks = json_decode($archives->remarks);
+            // Check if $remarks is an array
+            if (is_array($remarks)) {
+                $remarks = array_reverse($remarks);
+            } else {
+                // If $remarks is not an array, set it to an empty array
+                $remarks = [];
+            }
+            // dd($remarks);
+            // Return the view with archives and related data
+            return view('case_archive.detailsview', compact('archives', 'relatedOfficers', 'relatedViolations', 'remarks'));
+
+        } catch (ModelNotFoundException $e) {
+            // Handle case where archives with $id is not found
+            return response()->view('errors.404', [], 404);
+        }
+    }
+    public function detailarchivesedit(Request $request, $id) {
+        try {
+            // Find the archives by its ID or throw a ModelNotFoundException
+            $recentViolationsToday = archives::findOrFail($id);
+
+            // Retrieve all Traffic Violations ordered by code ascending
+            $violationz = TrafficViolation::orderBy('code', 'asc')->get();
+
+            // Prepare a collection for officers
+            $officers = collect();
+
+            // Get the apprehending officer name from the archives
+            $officerName = $recentViolationsToday->apprehending_officer;
+
+            // Query the ApprehendingOfficer model for officers with the given name
+            $officersForFile = ApprehendingOfficer::where('officer', $officerName)->get();
+
+            // Merge the officers into the collection
+            $officers = $officers->merge($officersForFile);
+
+            // Decode remarks if they are JSON-encoded
+            $remarks = json_decode($recentViolationsToday->remarks, true);
+            
+            // Check if $remarks is an array and reverse it if so
+            if (is_array($remarks)) {
+                $remarks = array_reverse($remarks);
+            } else {
+                // If $remarks is not an array or JSON decoding failed, set it to an empty array
+                $remarks = [];
+            }
+
+            // Pass data to the view
+            return view('case_archive.detailsedit', compact('recentViolationsToday', 'officers', 'violationz', 'remarks'));
+
+        } catch (ModelNotFoundException $e) {
+            // Handle the case where the archives with the specified ID is not found
+            return response()->view('errors.404', [], 404);
+        }
+    }
+    
+    public function updatearchives(){
+        // Fetch all traffic violations
+        
+        
+        // Fetch recent TasFiles ordered by case number descending
+        $recentViolationsToday = archives::orderBy('tas_no', 'desc')->get();
+        
+        // Fetch all codes (assuming TrafficViolation model provides codes)
+        $violation = TrafficViolation::all();
+        
+        // Prepare a collection for officers
+        $officers = collect();
+       
+        
+        // Iterate through each TrafficViolation record
+        foreach ($recentViolationsToday as $violation) {
+            // Extract the name of the apprehending officer for the current TrafficViolation
+            $officerName = $violation->apprehending_officer;
+    
+            // Query the ApprehendingOfficer model for officers with the given name
+            $officersForFile = ApprehendingOfficer::where('officer', $officerName)->get();
+    
+            // Merge the officers into the collection
+            $officers = $officers->merge($officersForFile);
+    
+ 
+        }
+  
+        // Pass data to the view, including the new variable $violationData
+        return view('case_archive.edit', compact('recentViolationsToday', 'violation', 'officers'));
+    }
+    public function updateStatusarchives(Request $request, $id){
+        try {
+            // Log the request data for debugging
+            \Log::info('Request data: ', $request->all());
+    
+            $archives = archives::findOrFail($id);
+    
+            // Log the received status for debugging
+            \Log::info('Received status: ' . $request->status);
+    
+            $archives->status = $request->status;
+            $archives->save();
+    
+            return redirect()->back()->with('success', 'Status updated successfully.');
+        } catch (\Exception $e) {
+            // Log any errors for debugging
+            \Log::error('Error updating status: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to update status: ' . $e->getMessage());
+        }
+    }
+    public function updatedetailarchives(Request $request, $id) {
+        try {
+            // Find the violation by ID
+            $violation = archives::findOrFail($id);
+    
+            // Validate the incoming request data
+            $validatedData = $request->validate([
+                'tas_no' => 'nullable|string|max:255',
+                'top' => 'nullable|string|max:255',
+                'driver' => 'nullable|string|max:255',
+                'apprehending_officer' => 'nullable|string|max:255',
+                'violation' => 'nullable|array',
+                'transaction_no' => 'nullable|string|max:255',
+                'date_received' => 'nullable|date',
+                'plate_no' => 'nullable|string|max:255',
+                'status' => 'nullable|string|max:255',
+                'contact_no' => 'nullable|string|max:255',
+                'remarks.*.text' => 'nullable|string',
+                'file_attach_existing.*' => 'nullable|file|max:512000', // Added file validation rules
+            ]);
+    
+            // Attach files
+            if ($request->hasFile('file_attach_existing')) {
+                // Retrieve existing file attachments and decode them
+                $existingFilePaths = json_decode($violation->file_attach, true) ?? [];
+    
+                $cx = count($existingFilePaths) + 1;
+                foreach ($request->file('file_attach_existing') as $file) {
+                    // Check if the file was actually uploaded
+                    if ($file->isValid()) {
+                        $x = "CS-".$violation->tas_no . "_documents_" . $cx . "_";
+                        $fileName = $x . time();
+                        $file->storeAs('attachments', $fileName, 'public');
+                        $existingFilePaths[] = 'attachments/' . $fileName; // Append the new file path
+                        $cx++;
+                    } else {
+                        // File upload failed, return an error response
+                        return response()->json(['error' => 'Failed to upload files.'], 500);
+                    }
+                }
+                $violation->file_attach = json_encode($existingFilePaths); // Save the updated array
+            }
+    
+            // Process remarks
+            if (isset($validatedData['remarks']) && is_array($validatedData['remarks'])) {
+                $remarksArray = [];
+                foreach ($validatedData['remarks'] as $remark) {
+                    $remarksArray[] = $remark['text'];
+                }
+                $validatedData['remarks'] = json_encode($remarksArray);
+            }
+    
+            // Merge new violations into existing violations array
+            if (!empty($validatedData['violation'])) {
+                $existingViolations = json_decode($violation->violation, true) ?? [];
+                $newViolations = array_filter($validatedData['violation'], function ($value) {
+                    return $value !== null;
+                });
+                $validatedData['violation'] = json_encode(array_unique(array_merge($existingViolations, $newViolations)));
+            }
+    
+            // Update the violation with validated data
+            $violation->update($validatedData);
+    
+            // If new violations were added, add them to the archives model
+            if (!empty($newViolations)) {
+                foreach ($newViolations as $newViolation) {
+                    $violation->addViolation($newViolation);
+                }
+                // Refresh the model after adding new violations
+                $violation = archives::findOrFail($id);
+            }
+    
+            // Return JSON response with updated violation details
+            return response()->json(['success' => "Update Successfully"], 200);
+    
+        } catch (\Exception $e) {
+            // Log the error
+            Log::error('Error updating Violation: ' . $e->getMessage());
+    
+            // Set error message and return JSON response
+            return response()->json(['error' => 'Error updating Violation: ' . $e->getMessage()], 500);
+        }
+    }
+    public function removeAttachmentarchives(Request $request, $id) {
+        try {
+            $archive = Archives::findOrFail($id);
+            $attachmentToRemove = $request->input('attachment');
+    
+            if ($attachmentToRemove) {
+                $attachments = json_decode($archive->file_attach, true) ?? [];
+    
+                if (($key = array_search($attachmentToRemove, $attachments)) !== false) {
+                    unset($attachments[$key]);
+                    $archive->file_attach = json_encode(array_values($attachments));
+                    $archive->save();
+    
+                    if (Storage::exists($attachmentToRemove)) {
+                        Storage::delete($attachmentToRemove);
+                    }
+    
+                    return response()->json(['success' => 'Attachment removed successfully.']);
+                } else {
+                    return response()->json(['error' => 'Attachment not found in the list.'], 404);
+                }
+            } else {
+                return response()->json(['error' => 'Attachment parameter is missing.'], 400);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to remove attachment', ['exception' => $e]);
+            return response()->json(['error' => 'Failed to remove attachment.'], 500);
+        }
+    }
+    public function finishCase_archives(Request $request, $id){
+        $tasFile = archives::findOrFail($id);
+        $tasFile->status = 'closed';
+        $tasFile->fine_fee = $request->fine_fee;
+        $tasFile->save();
+
+        return redirect()->back()->with('success', 'Case finished successfully.');
+    }
+    public function delete_edit_violation(Request $request, $id) {
+        $archive = Archives::findOrFail($id); // Ensure the model name 'Archives' matches your actual model
+        $violationIndex = $request->input('index');
+    
+        // Retrieve existing violations
+        $violations = json_decode($archive->violation, true) ?? [];
+    
+        if (isset($violations[$violationIndex])) {
+            array_splice($violations, $violationIndex, 1);
+            $archive->violation = json_encode($violations);
+            $archive->save();
+        }
+    
+        return response()->json(['message' => 'Violation deleted successfully', 'violations' => json_decode($archive->violation)]);
+    }
+    function delete_archives($id){
+        try {
+            $violation = archives::findOrFail($id);
+            $violation->delete();
+            return response()->json(['success' => 'Cases deleted successfully'],200);
+        } catch (\Exception $e) {
+            Log::error('Error deleting Violation: ' . $e->getMessage());
+            return response()->json(['error' => 'Error deleting Violation: ' . $e->getMessage()], 500);
+        }
+    }
+    public function update_archive_violation(Request $request, $id){
+        $archives = archives::findOrFail($id);
+        $violationIndex = $request->input('index');
+        $newViolation = $request->input('violation');
+    
+        // Retrieve existing violations
+        $violations = json_decode($archives->violation, true) ?? [];
+    
+        if (isset($violations[$violationIndex])) {
+            $violations[$violationIndex] = $newViolation;
+            $archives->violation = json_encode($violations);
+            $archives->save();
+        }
+    
+        return response()->json(['message' => 'Violation updated successfully', 'violations' => json_decode($archives->violation)]);
+    }
+    public function deleteRemark_archives(Request $request){
+        // Retrieve data from AJAX request
+        $violationId = $request->input('violation_id');
+        $index = $request->input('index');
+
+        // Find the archives by violation ID (assuming archives is your model)
+        try {
+            $archives = archives::findOrFail($violationId);
+
+            // Decode remarks from JSON to array
+            $remarks = json_decode($archives->remarks, true);
+
+            // Check if remarks exist and if the index is valid
+            if (is_array($remarks) && array_key_exists($index, $remarks)) {
+                // Remove the remark at the specified index
+                unset($remarks[$index]);
+
+                // Encode the updated remarks array back to JSON and update the archives
+                $archives->remarks = json_encode(array_values($remarks)); // Re-index array
+                $archives->save();
+
+                // Return a success response
+                return response()->json(['message' => 'Remark deleted successfully']);
+            } else {
+                // Return an error response if remark or index is invalid
+                return response()->json(['error' => 'Invalid remark index'], 404);
+            }
+        } catch (\Exception $e) {
+            // Return an error response if archives is not found or any other exception occurs
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+///////////////////////////////////////////////////=============================================================================================================================    
+///////////////////////////////////////////////////=============================================================================================================================    
+///////////////////////////////////////////////////=============================================================================================================================    
+///////////////////////////////////////////////////=============================================================================================================================    
+///////////////////////////////////////////////////=============================================================================================================================    
+    
     public function admittedsubmit(Request $request) {
          // dd($request->all());
          try {
@@ -453,7 +953,7 @@ class DashboardController extends Controller
 
                 $admitted->save();
             } else {
-                return redirect()->back()->with('error', 'resolution no. already exists.');
+                return redirect()->back()->with('error', 'Admitted no. already exists.');
             }
             DB::commit();
             return redirect()->back()->with('success', 'Form submitted successfully!');
@@ -743,11 +1243,11 @@ public function editdepp(){
     public function updateTas(Request $request, $id) {
         try {
             // Find the violation by ID
-            $violation = TasFile::findOrFail($id);
-
+            $violation = tasFile::findOrFail($id);
+        
             // Validate the incoming request data
             $validatedData = $request->validate([
-                'case_no' => 'nullable|string|max:255',
+                'tas_no' => 'nullable|string|max:255',
                 'top' => 'nullable|string|max:255',
                 'driver' => 'nullable|string|max:255',
                 'apprehending_officer' => 'nullable|string|max:255',
@@ -755,34 +1255,34 @@ public function editdepp(){
                 'transaction_no' => 'nullable|string|max:255',
                 'date_received' => 'nullable|date',
                 'plate_no' => 'nullable|string|max:255',
+                'status' => 'nullable|string|max:255',
                 'contact_no' => 'nullable|string|max:255',
                 'remarks.*.text' => 'nullable|string',
                 'file_attach_existing.*' => 'nullable|file|max:512000', // Added file validation rules
             ]);
-
-       // Attach files
-if ($request->hasFile('file_attach_existing')) {
-    // Retrieve existing file attachments and decode them
-    $existingFilePaths = json_decode($violation->file_attach, true) ?? [];
-    
-    $cx = count($existingFilePaths) + 1;
-    foreach ($request->file('file_attach_existing') as $file) {
-        // Check if the file was actually uploaded
-        if ($file->isValid()) {
-            $x = "CS-".$violation->case_no . "_documents_" . $cx . "_";
-            $fileName = $x . time();
-            $file->storeAs('attachments', $fileName, 'public');
-            $existingFilePaths[] = 'attachments/' . $fileName; // Append the new file path
-            $cx++;
-        } else {
-            // File upload failed, return an error response
-            return back()->with('error', 'Failed to upload files.');
-        }
-    }
-    $violation->file_attach = json_encode($existingFilePaths); // Save the updated array
-}
-
-
+        
+            // Attach files
+            if ($request->hasFile('file_attach_existing')) {
+                // Retrieve existing file attachments and decode them
+                $existingFilePaths = json_decode($violation->file_attach, true) ?? [];
+        
+                $cx = count($existingFilePaths) + 1;
+                foreach ($request->file('file_attach_existing') as $file) {
+                    // Check if the file was actually uploaded
+                    if ($file->isValid()) {
+                        $x = "CS-".$violation->case_no . "_documents_" . $cx . "_";
+                        $fileName = $x . time();
+                        $file->storeAs('attachments', $fileName, 'public');
+                        $existingFilePaths[] = 'attachments/' . $fileName; // Append the new file path
+                        $cx++;
+                    } else {
+                        // File upload failed, return an error response
+                        return response()->json(['error' => 'Failed to upload files.'], 500);
+                    }
+                }
+                $violation->file_attach = json_encode($existingFilePaths); // Save the updated array
+            }
+        
             // Process remarks
             if (isset($validatedData['remarks']) && is_array($validatedData['remarks'])) {
                 $remarksArray = [];
@@ -791,7 +1291,7 @@ if ($request->hasFile('file_attach_existing')) {
                 }
                 $validatedData['remarks'] = json_encode($remarksArray);
             }
-
+        
             // Merge new violations into existing violations array
             if (!empty($validatedData['violation'])) {
                 $existingViolations = json_decode($violation->violation, true) ?? [];
@@ -800,27 +1300,28 @@ if ($request->hasFile('file_attach_existing')) {
                 });
                 $validatedData['violation'] = json_encode(array_unique(array_merge($existingViolations, $newViolations)));
             }
-
+        
             // Update the violation with validated data
             $violation->update($validatedData);
-
-            // If new violations were added, add them to the TasFile model
+        
+            // If new violations were added, add them to the tasFile model
             if (!empty($newViolations)) {
                 foreach ($newViolations as $newViolation) {
                     $violation->addViolation($newViolation);
                 }
                 // Refresh the model after adding new violations
-                $violation = TasFile::findOrFail($id);
+                $violation = tasFile::findOrFail($id);
             }
-
-            return back()->with('success', 'Violation updated successfully')->with('status', 201);
-
+        
+            // Return JSON response with updated violation details
+            return response()->json(['success' => "Update Successfully"], 200);
+        
         } catch (\Exception $e) {
             // Log the error
             Log::error('Error updating Violation: ' . $e->getMessage());
-
-            // Set error message
-            return back()->with('error', 'Error updating Violation: ' . $e->getMessage());
+        
+            // Set error message and return JSON response
+            return response()->json(['error' => 'Error updating Violation: ' . $e->getMessage()], 500);
         }
     }
     public function updateStatus(Request $request, $id){
@@ -933,16 +1434,17 @@ if ($request->hasFile('file_attach_existing')) {
                 return view('sub.print', compact('tasFile', 'compactData'));
         }
     }
-    function deleteTas($id){
+    public function deleteTas($id) {
         try {
             $violation = TasFile::findOrFail($id);
             $violation->delete();
-            return redirect()->back()->with('success', 'Violation deleted successfully');
+            return response()->json(['success' => 'Cases deleted successfully'],200);
         } catch (\Exception $e) {
             Log::error('Error deleting Violation: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Error deleting Violation: ' . $e->getMessage());
+            return response()->json(['error' => 'Error deleting Violation: ' . $e->getMessage()], 500);
         }
     }
+    
     public function analyticsDash(){
         // Fetch the data from the database
         $data = TasFile::select(
@@ -974,9 +1476,8 @@ if ($request->hasFile('file_attach_existing')) {
     public function updateContest(){
         // Fetch all traffic violations
         
-        
         // Fetch recent TasFiles ordered by case number descending
-        $recentViolationsToday = TasFile::orderBy('case_no', 'desc')->get();
+        $recentViolationsToday = TasFile::all()->sortByDesc('case_no');
         
         // Fetch all codes (assuming TrafficViolation model provides codes)
         $violation = TrafficViolation::all();
@@ -1373,7 +1874,7 @@ if ($request->hasFile('file_attach_existing')) {
                 $tasFile->save();
 
                 // Return a success response
-                return response()->json(['message' => 'Remark deleted successfully']);
+                return response()->json(['success' => 'Remark deleted successfully']);
             } else {
                 // Return an error response if remark or index is invalid
                 return response()->json(['error' => 'Invalid remark index'], 404);
@@ -1383,4 +1884,264 @@ if ($request->hasFile('file_attach_existing')) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    //====================================================================================================================================================================
+    //====================================================================================================================================================================
+    //====================================================================================================================================================================
+    //====================================================================================================================================================================
+    //====================================================================================================================================================================
+    //====================================================================================================================================================================
+    
+
+    function delete_admitted($id){
+           try {
+               $violation = admitted::findOrFail($id);
+               $violation->delete();
+               return response()->json(['success' => 'Cases deleted successfully'],200);
+           } catch (\Exception $e) {
+               Log::error('Error deleting Violation: ' . $e->getMessage());
+               return response()->json(['error' => 'Error deleting Violation: ' . $e->getMessage()], 500);
+           }
+       }
+       public function detailsadmittededit(Request $request, $id) {
+           try {
+               // Find the admitted by its ID or throw a ModelNotFoundException
+               $recentViolationsToday = admitted::findOrFail($id);
+       
+               // Retrieve all Traffic Violations ordered by code ascending
+               $violationz = TrafficViolation::orderBy('code', 'asc')->get();
+       
+               // Prepare a collection for officers
+               $officers = collect();
+       
+               // Get the apprehending officer name from the admitted
+               $officerName = $recentViolationsToday->apprehending_officer;
+       
+               // Query the ApprehendingOfficer model for officers with the given name
+               $officersForFile = ApprehendingOfficer::where('officer', $officerName)->get();
+       
+               // Merge the officers into the collection
+               $officers = $officers->merge($officersForFile);
+       
+               // Decode remarks if they are JSON-encoded
+               $remarks = json_decode($recentViolationsToday->remarks, true);
+               
+               // Check if $remarks is an array and reverse it if so
+               if (is_array($remarks)) {
+                   $remarks = array_reverse($remarks);
+               } else {
+                   // If $remarks is not an array or JSON decoding failed, set it to an empty array
+                   $remarks = [];
+               }
+       
+               // Pass data to the view
+               return view('admitted.detailsedit', compact('recentViolationsToday', 'officers', 'violationz', 'remarks'));
+       
+           } catch (ModelNotFoundException $e) {
+               // Handle the case where the admitted with the specified ID is not found
+               return response()->view('errors.404', [], 404);
+           }
+       }
+       public function delete_edit_violation_admitted(Request $request, $id) {
+           $archive = admitted::findOrFail($id); // Ensure the model name 'admitted' matches your actual model
+           $violationIndex = $request->input('index');
+       
+           // Retrieve existing violations
+           $violations = json_decode($archive->violation, true) ?? [];
+       
+           if (isset($violations[$violationIndex])) {
+               array_splice($violations, $violationIndex, 1);
+               $archive->violation = json_encode($violations);
+               $archive->save();
+           }
+       
+           return response()->json(['message' => 'Violation deleted successfully', 'violations' => json_decode($archive->violation)]);
+       }
+       public function removeAttachmentadmitted(Request $request, $id) {
+           try {
+               $archive = admitted::findOrFail($id);
+               $attachmentToRemove = $request->input('attachment');
+       
+               if ($attachmentToRemove) {
+                   $attachments = json_decode($archive->file_attach, true) ?? [];
+       
+                   if (($key = array_search($attachmentToRemove, $attachments)) !== false) {
+                       unset($attachments[$key]);
+                       $archive->file_attach = json_encode(array_values($attachments));
+                       $archive->save();
+       
+                       if (Storage::exists($attachmentToRemove)) {
+                           Storage::delete($attachmentToRemove);
+                       }
+       
+                       return response()->json(['success' => 'Attachment removed successfully.']);
+                   } else {
+                       return response()->json(['error' => 'Attachment not found in the list.'], 404);
+                   }
+               } else {
+                   return response()->json(['error' => 'Attachment parameter is missing.'], 400);
+               }
+           } catch (\Exception $e) {
+               \Log::error('Failed to remove attachment', ['exception' => $e]);
+               return response()->json(['error' => 'Failed to remove attachment.'], 500);
+           }
+       }
+       public function deleteRemark_admitted(Request $request){
+           // Retrieve data from AJAX request
+           $violationId = $request->input('violation_id');
+           $index = $request->input('index');
+   
+           // Find the admitted by violation ID (assuming admitted is your model)
+           try {
+               $admitted = admitted::findOrFail($violationId);
+   
+               // Decode remarks from JSON to array
+               $remarks = json_decode($admitted->remarks, true);
+   
+               // Check if remarks exist and if the index is valid
+               if (is_array($remarks) && array_key_exists($index, $remarks)) {
+                   // Remove the remark at the specified index
+                   unset($remarks[$index]);
+   
+                   // Encode the updated remarks array back to JSON and update the admitted
+                   $admitted->remarks = json_encode(array_values($remarks)); // Re-index array
+                   $admitted->save();
+   
+                   // Return a success response
+                   return response()->json(['success' => 'Remark deleted successfully']);
+               } else {
+                   // Return an error response if remark or index is invalid
+                   return response()->json(['error' => 'Invalid remark index'], 404);
+               }
+           } catch (\Exception $e) {
+               // Return an error response if admitted is not found or any other exception occurs
+               return response()->json(['error' => $e->getMessage()], 500);
+           }
+       }
+       public function updatedetailadmitted(Request $request, $id) {
+        try {
+            // Find the violation by ID
+            $violation = admitted::findOrFail($id);
+    
+            // Validate the incoming request data
+            $validatedData = $request->validate([
+                'admittedno' => 'nullable|string|max:255',
+                'top' => 'nullable|string|max:255',
+                'driver' => 'nullable|string|max:255',
+                'apprehending_officer' => 'nullable|string|max:255',
+                'violation' => 'nullable|array',
+                'transaction_no' => 'nullable|string|max:255',
+                'date_received' => 'nullable|date',
+                'plate_no' => 'nullable|string|max:255',
+                'status' => 'nullable|string|max:255',
+                'contact_no' => 'nullable|string|max:255',
+                'remarks.*.text' => 'nullable|string',
+                'file_attach_existing.*' => 'nullable|file|max:512000', // Added file validation rules
+            ]);
+    
+            // Attach files
+            if ($request->hasFile('file_attach_existing')) {
+                // Retrieve existing file attachments and decode them
+                $existingFilePaths = json_decode($violation->file_attach, true) ?? [];
+    
+                $cx = count($existingFilePaths) + 1;
+                foreach ($request->file('file_attach_existing') as $file) {
+                    // Check if the file was actually uploaded
+                    if ($file->isValid()) {
+                        $x = "CS-".$violation->admittedno . "_documents_" . $cx . "_";
+                        $fileName = $x . time();
+                        $file->storeAs('attachments', $fileName, 'public');
+                        $existingFilePaths[] = 'attachments/' . $fileName; // Append the new file path
+                        $cx++;
+                    } else {
+                        // File upload failed, return an error response
+                        return response()->json(['error' => 'Failed to upload files.'], 500);
+                    }
+                }
+                $violation->file_attach = json_encode($existingFilePaths); // Save the updated array
+            }
+    
+            // Process remarks
+            if (isset($validatedData['remarks']) && is_array($validatedData['remarks'])) {
+                $remarksArray = [];
+                foreach ($validatedData['remarks'] as $remark) {
+                    $remarksArray[] = $remark['text'];
+                }
+                $validatedData['remarks'] = json_encode($remarksArray);
+            }
+    
+            // Merge new violations into existing violations array
+            if (!empty($validatedData['violation'])) {
+                $existingViolations = json_decode($violation->violation, true) ?? [];
+                $newViolations = array_filter($validatedData['violation'], function ($value) {
+                    return $value !== null;
+                });
+                $validatedData['violation'] = json_encode(array_unique(array_merge($existingViolations, $newViolations)));
+            }
+    
+            // Update the violation with validated data
+            $violation->update($validatedData);
+    
+            // If new violations were added, add them to the admitted model
+            if (!empty($newViolations)) {
+                foreach ($newViolations as $newViolation) {
+                    $violation->addViolation($newViolation);
+                }
+                // Refresh the model after adding new violations
+                $violation = admitted::findOrFail($id);
+            }
+    
+            // Return JSON response with updated violation details
+            return response()->json(['success' => "Update Successfully"], 200);
+    
+        } catch (\Exception $e) {
+            // Log the error
+            Log::error('Error updating Violation: ' . $e->getMessage());
+    
+            // Set error message and return JSON response
+            return response()->json(['error' => 'Error updating Violation: ' . $e->getMessage()], 500);
+        }
+    }
+    public function updateStatusadmitted(Request $request, $id){
+        try {
+            // Log the request data for debugging
+            \Log::info('Request data: ', $request->all());
+    
+            $archives = admitted::findOrFail($id);
+    
+            // Log the received status for debugging
+            \Log::info('Received status: ' . $request->status);
+    
+            $archives->status = $request->status;
+            $archives->save();
+    
+            return redirect()->back()->with('success', 'Status updated successfully.');
+        } catch (\Exception $e) {
+            // Log any errors for debugging
+            \Log::error('Error updating status: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to update status: ' . $e->getMessage());
+        }
+    }
+    public function finishCase_admitted(Request $request, $id){
+        $tasFile = admitted::findOrFail($id);
+        $tasFile->status = 'closed';
+        $tasFile->fine_fee = $request->fine_fee;
+        $tasFile->save();
+
+        return redirect()->back()->with('success', 'Case finished successfully.');
+    }
+
+
+
+
+
+
+
+    
+    //====================================================================================================================================================================
+    //====================================================================================================================================================================
+    //====================================================================================================================================================================
+    //====================================================================================================================================================================
+    //====================================================================================================================================================================
+    //====================================================================================================================================================================
 }

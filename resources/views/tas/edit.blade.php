@@ -43,12 +43,12 @@
 <div class="col-12">
     <div class="card recent-violations overflow-auto">
         <div class="card-body">
-            <h5 class="card-title">Edit Contested Cases<span></span></h5>
+            <h5 class="card-title">Edit Archives Cases<span></span></h5>
             <table class="table table-striped table-bordered table-hover datatable">
             <thead class="thead-light">
         <tr>
             <th scope="col">Record Status</th>
-            <th scope="col">Case No.</th>
+            <th scope="col">Tas No.</th>
             <th scope="col">TOP</th>
             <th scope="col">Driver</th>
             <th scope="col">Apprehending Officer</th>
@@ -141,10 +141,124 @@
         </div>
     </div>
 </div>
+
 @endforeach
+
+
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+    $(document).ready(function() {
+        // Event listener for delete violation button
+        $(document).on('click', '.delete-cases', function() {
+            var violationId = $(this).data('violation-id');
+            showDeleteConfirmation(violationId);
+        });
+
+        // Function to show Toastr confirmation prompt
+        function showDeleteConfirmation(violationId) {
+            // Configure Toastr options
+            toastr.options = {
+                closeButton: false,
+                progressBar: true,
+                positionClass: 'toast-top-center',
+                preventDuplicates: true,
+                onclick: null,
+                showDuration: '300',
+                hideDuration: '1000',
+                timeOut: '0', // To make it sticky
+                extendedTimeOut: '0', // To make it sticky
+                showEasing: 'swing',
+                hideEasing: 'linear',
+                showMethod: 'fadeIn',
+                hideMethod: 'fadeOut'
+            };
+
+            var confirmationPrompt = `
+                <div class="confirmation-prompt">
+                    <p class="prompt-text">Are you sure you want to delete this Case?</p>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-danger btn-confirm-yes">Yes</button>
+                        <button type="button" class="btn btn-secondary btn-confirm-no">No</button>
+                    </div>
+                </div>
+            `;
+
+            toastr.info(confirmationPrompt, 'Confirm Deletion', {
+                closeButton: true, // To show a close button
+                closeHtml: '<button><i class="fas fa-times"></i></button>', // Custom HTML for the close button
+            });
+
+            // Unbind previously bound event handlers to prevent multiple executions
+            $(document).off('click', '.btn-confirm-yes').on('click', '.btn-confirm-yes', function() {
+                deleteViolation(violationId);
+                toastr.clear(); // Clear the Toastr notification
+            });
+
+            $(document).off('click', '.btn-confirm-no').on('click', '.btn-confirm-no', function() {
+                toastr.clear(); // Clear the Toastr notification
+            });
+        }
+
+        // Function to handle deletion request
+        function deleteViolation(violationId) {
+            var fetchUrl = '{{ route("violations.delete", ["id" => "ID_PLACEHOLDER"]) }}'.replace('ID_PLACEHOLDER', violationId);
+
+            $.ajax({
+                type: 'DELETE',
+                url: fetchUrl,
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('.table-row[data-bs-target="#editViolationModal' + violationId + '"]').remove();
+                        localStorage.removeItem('modalId');
+
+                        // Hide modal
+                        $('#editViolationModal' + violationId).modal('hide');
+                        toastr.success(response.success);
+                        
+                        
+                    } else {
+                        toastr.error(response.error);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    toastr.error('Failed to delete violation.');
+                    console.error('Error:', error);
+                }
+            });
+        }
+    });
+</script>
+
+<script>
+
+        // Function to handle saving changes and reloading modal
+    function saveChangesAndReloadModal(violationId) {
+        var form = $('#editViolationForm' + violationId);
+        var formData = new FormData(form[0]);
+
+        $.ajax({
+            type: 'POST',
+            url: form.attr('action'),
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                toastr.success(response.success); // Display success message (if needed)
+
+                // Update modal content with the updated violation details
+                reloadModalContent(violationId);
+                // Close the modal (if needed)
+                // $('#editViolationModal' + violationId).modal('hide');
+            },
+            error: function(xhr, status, error) {
+                toastr.error(xhr.responseJSON.error); // Display error message (if needed)
+            }
+        });
+    }
     const fetchViolationUrl = @json(route('fetchingeditfile', ['id' => 'ID_PLACEHOLDER']));
 
     function initializeModalScripts(modalId) {
@@ -314,282 +428,100 @@
             });
         }, 3000); // 3 seconds delay
     }
-</script>
+    // Define deleteViolation globally
+    function deleteViolation(violationId, index) {
+        // Show confirmation prompt using Toastr
+        toastr.options = {
+            closeButton: false,
+            progressBar: true,
+            positionClass: 'toast-top-center',
+            preventDuplicates: true,
+            onclick: null,
+            showDuration: '300',
+            hideDuration: '1000',
+            timeOut: '0', // To make it sticky
+            extendedTimeOut: '0', // To make it sticky
+            showEasing: 'swing',
+            hideEasing: 'linear',
+            showMethod: 'fadeIn',
+            hideMethod: 'fadeOut'
+        };
 
-
-
-<script>
-// Function to handle deleting a violation
-function deleteViolation(violationId, index) {
-    // Show a confirmation prompt using Toastr
-    toastr.options = {
-        closeButton: false,
-        progressBar: true,
-        positionClass: 'toast-top-center',
-        preventDuplicates: true,
-        onclick: null,
-        showDuration: '300',
-        hideDuration: '1000',
-        timeOut: '0', // To make it sticky
-        extendedTimeOut: '0', // To make it sticky
-        showEasing: 'swing',
-        hideEasing: 'linear',
-        showMethod: 'fadeIn',
-        hideMethod: 'fadeOut'
-    };
-    var confirmationPrompt = `
-        <div class="confirmation-prompt">
-            <p class="prompt-text">Are you sure you want to delete this violation?</p>
-            <div class="btn-group">
-                <button type="button" class="btn btn-danger btn-confirm-yes">Yes</button>
-                <button type="button" class="btn btn-secondary btn-confirm-no">No</button>
+        var confirmationPrompt = `
+            <div class="confirmation-prompt">
+                <p class="prompt-text">Are you sure you want to delete this violation?</p>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-danger btn-confirm-yes">Yes</button>
+                    <button type="button" class="btn btn-secondary btn-confirm-no">No</button>
+                </div>
             </div>
-        </div>
-    `;
+        `;
 
-    toastr.info(confirmationPrompt, 'Confirm Deletion', {
-        closeButton: true, // To show a close button
-        closeHtml: '<button><i class="fas fa-times"></i></button>', // Custom HTML for the close button
-    });
-
-    // Store violationId and index as data attributes
-    $('.btn-confirm-yes').data('violation-id', violationId);
-    $('.btn-confirm-yes').data('index', index);
-}
-
-// Add event listener for the "Yes" button
-$(document).on('click', '.btn-confirm-yes', function() {
-    var violationId = $(this).data('violation-id');
-    var index = $(this).data('index');
-    var field = document.getElementById('violationField' + violationId + '_' + index);
-    field.remove();
-    // Send AJAX request to delete violation
-    deleteViolationRequest(violationId, index);
-    toastr.clear(); // Clear the Toastr notification
-});
-
-// Add event listener for the "No" button
-$(document).on('click', '.btn-confirm-no', function() {
-    toastr.clear(); // Clear the Toastr notification
-});
-const delvio = {!! json_encode(route('edit.viodelete', ['id' => 'ID_PLACEHOLDER'])) !!};
-// Function to send AJAX request to delete violation
-function deleteViolationRequest(violationId, index) {
-    var fetchUrl = updvio.replace('ID_PLACEHOLDER', violationId);
-    $.ajax({
-        type: 'POST',
-        url: fetchUrl,
-        data: {
-            _token: '{{ csrf_token() }}',
-            index: index
-        },
-        success: function(response) {
-            toastr.success(response.message); // Display success message
-        },
-        error: function(xhr, status, error) {
-            toastr.error(xhr.responseJSON.message); // Display error message
-        }
-    });
-}
-
-
-    var violationsData; // Declare violationsData in the global scope
-
-    document.addEventListener('DOMContentLoaded', function() {
-        // Fetch violations data from PHP
-        violationsData = {!! $violation !!}; // Convert PHP array to JavaScript object
-
-        // Initialize autocomplete for existing inputs
-        document.querySelectorAll('input[name="violations[]"]').forEach(function(input) {
-            autocomplete(input, violationsData);
+        toastr.info(confirmationPrompt, 'Confirm Deletion', {
+            closeButton: true, // To show a close button
+            closeHtml: '<button><i class="fas fa-times"></i></button>', // Custom HTML for the close button
         });
-    });
 
-    // Autocomplete function
-    function autocomplete(input, data) {
-        input.addEventListener('input', function() {
-            var val = this.value.toLowerCase();
-            var suggestions = [];
-            data.forEach(function(item) {
-                if (item.toLowerCase().startsWith(val)) {
-                    suggestions.push(item);
-                }
-            });
+        // Store violationId and index as data attributes
+        $('.btn-confirm-yes').data('violation-id', violationId);
+        $('.btn-confirm-yes').data('index', index);
 
-            var dataList = document.createElement('datalist');
-            dataList.id = 'suggestions';
-            suggestions.forEach(function(suggestion) {
-                var option = document.createElement('option');
-                option.value = suggestion;
-                dataList.appendChild(option);
-            });
+        // Add event listener for the "Yes" button
+        $(document).off('click', '.btn-confirm-yes').on('click', '.btn-confirm-yes', function() {
+        deleteViolationRequest(violationId, index);
+        toastr.clear(); // Clear the Toastr notification
+        });
 
-            // Clear previous suggestions
-            var existingDataList = document.getElementById('suggestions');
-            if (existingDataList) {
-                existingDataList.remove();
-            }
-
-            // Append new suggestions
-            this.parentNode.appendChild(dataList);
-            this.setAttribute('list', 'suggestions');
+        $(document).off('click', '.btn-confirm-no').on('click', '.btn-confirm-no', function() {
+            toastr.clear(); // Clear the Toastr notification
         });
     }
 
-   // Function to handle editing a violation
-function editViolation(violationId, index) {
-    var input = document.getElementById('violation' + violationId + '_' + index);
-    var newViolation = input.value;
-    // Send AJAX request to update violation
-    updateViolation(violationId, index, newViolation);
-}
-
-
-  
-    // Function to add a new violation
-    function addNewViolation(violationId) {
-        var container = document.getElementById('violationsContainer' + violationId);
-        var newIndex = container.querySelectorAll('input[type="text"]').length;
-
-        var div = document.createElement('div');
-        div.className = 'mb-3';
-        div.id = 'violationField' + violationId + '_' + newIndex;
-
-        var label = document.createElement('label');
-        label.setAttribute('for', 'violation' + violationId + '_' + newIndex);
-        label.className = 'form-label';
-        label.textContent = 'Violation ' + (newIndex + 1);
-
-        var inputGroup = document.createElement('div');
-        inputGroup.className = 'input-group';
-
-        var iconSpan = document.createElement('span');
-        iconSpan.className = 'input-group-text';
-        iconSpan.innerHTML = '<i class="bi bi-exclamation-circle"></i>';
-
-        var input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'form-control';
-        input.id = 'violation' + violationId + '_' + newIndex;
-        input.name = 'violations[]';
-        input.value = '';
-        input.setAttribute('list', 'suggestions');
-
-        var editButton = document.createElement('button');
-        editButton.type = 'button';
-        editButton.className = 'btn btn-secondary';
-        editButton.textContent = 'Edit';
-        editButton.setAttribute('onclick', `editViolation('${violationId}', ${newIndex})`);
-
-        var deleteButton = document.createElement('button');
-        deleteButton.type = 'button';
-        deleteButton.className = 'btn btn-danger';
-        deleteButton.textContent = 'Delete';
-        deleteButton.setAttribute('onclick', `deleteViolation('${violationId}', ${newIndex})`);
-
-        inputGroup.appendChild(iconSpan);
-        inputGroup.appendChild(input);
-        inputGroup.appendChild(editButton);
-        inputGroup.appendChild(deleteButton);
-
-        div.appendChild(label);
-        div.appendChild(inputGroup);
-        container.appendChild(div);
-
-        // Initialize autocomplete
-        autocomplete(input, violationsData);
-    }
-
-    const updvio = {!! json_encode(route('edit.updatevio', ['id' => 'ID_PLACEHOLDER'])) !!};
-    function updateViolation(violationId, index, newViolation) {
-        
-        var fetchUrl = updvio.replace('ID_PLACEHOLDER', violationId);
-        fetch(fetchUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify({ index: index, violation: newViolation })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                toastr.success(data.message);
-            } else {
-                toastr.error(data.message);
-            }
-        })
-        .catch(error => {
-            toastr.error('An error occurred while updating the violation.');
-            console.error('Error:', error);
-        });
-    }
-
-    const delviox = {!! json_encode(route('edit.viodelete', ['id' => 'ID_PLACEHOLDER'])) !!};
+    // Function to handle deleting a violation
     function deleteViolationRequest(violationId, index) {
-        var fetchUrl = delviox.replace('ID_PLACEHOLDER', violationId);
-        fetch(fetchUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify({ index: index })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                toastr.success(data.message);
-            } else {
-                toastr.error(data.message);
-            }
-        })
-        .catch(error => {
-            toastr.error('An error occurred while deleting the violation.');
-            console.error('Error:', error);
-        });
-    }
-   
-</script>
-
-<!-- Script to handle confirmation -->
-<script>
-    $(document).ready(function() {
-    $('#attachmentForm').on('submit', function(e) {
-        e.preventDefault();
-
-        var formData = new FormData(this);
-        var route = $(this).data('route'); // Get the route URL from data attribute
+        var fetchUrl = '{{ route("edit.viodelete", ["id" => "ID_PLACEHOLDER"]) }}'.replace('ID_PLACEHOLDER', violationId);
 
         $.ajax({
-            type: 'POST',
-            url: route, // Use the route URL
-            data: formData,
-            processData: false,
-            contentType: false,
+            type: 'DELETE',
+            url: fetchUrl,
+            data: {
+                _token: '{{ csrf_token() }}',
+                index: index
+            },
             success: function(response) {
+                // reloadModalContent(violationId);
+                $('#violationField' + violationId + '_' + index).remove();
                 toastr.success(response.message); // Display success message
-                location.reload(); // Reload the page to see the updated attachments
+                 // Remove the deleted violation from the DOM
+                 
             },
             error: function(xhr, status, error) {
                 toastr.error(xhr.responseJSON.message); // Display error message
             }
         });
-    });
-});
- 
-</script>
-<!-- JavaScript code -->
-<script>
+    }
+
+    // Rest of your script remains the same
+
     $(document).ready(function() {
-        var attachmentToRemove; // Variable to store attachment to remove
+        // Event listener for delete violation button
+        $(document).on('click', '.delete-violation', function() {
+            var violationId = $(this).data('violation-id');
+            var index = $(this).data('index');
+            deleteViolation(violationId, index);
+        });
 
-        // Handle click on delete attachment button
+        // Event listener for delete attachment button
         $(document).on('click', '.delete-attachment', function() {
-            attachmentToRemove = $(this).data('attachment'); // Set attachment to remove
+            var violationId = $(this).data('violation-id');
+            var attachmentToRemove = $(this).data('attachment');
+            var index = $(this).data('index');
+            deleteAttachment(violationId, attachmentToRemove, index);
+        });
 
-            // Show a confirmation prompt using Toastr
+        // Function to handle deleting an attachment
+        function deleteAttachment(violationId, attachmentToRemove, index) {
+            // Show confirmation prompt using Toastr
             toastr.options = {
                 closeButton: false,
                 progressBar: true,
@@ -605,59 +537,67 @@ function editViolation(violationId, index) {
                 showMethod: 'fadeIn',
                 hideMethod: 'fadeOut'
             };
+
             var confirmationPrompt = `
-    <div class="confirmation-prompt">
-        <p class="prompt-text">Are you sure you want to delete this attachment?</p>
-        <div class="btn-group">
-            <button type="button" class="btn btn-danger btn-confirm-yes">Yes</button>
-            <button type="button" class="btn btn-secondary btn-confirm-no">No</button>
-        </div>
-    </div>
-`;
+                <div class="confirmation-prompt">
+                    <p class="prompt-text">Are you sure you want to delete this attachment?</p>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-danger btn-confirm-yes">Yes</button>
+                        <button type="button" class="btn btn-secondary btn-confirm-no">No</button>
+                    </div>
+                </div>
+            `;
+
             toastr.info(confirmationPrompt, 'Confirm Deletion', {
                 closeButton: true, // To show a close button
                 closeHtml: '<button><i class="fas fa-times"></i></button>', // Custom HTML for the close button
             });
 
-            // Add event listener for the "Yes" button
-            $(document).on('click', '.btn-confirm-yes', function() {
-                confirmDeletion(); // Call the confirmDeletion function
-            });
+            // Store violationId and attachmentToRemove as data attributes
+            $('.btn-confirm-yes').data('violation-id', violationId);
+            $('.btn-confirm-yes').data('attachment', attachmentToRemove);
+            $('.btn-confirm-yes').data('index', index);
 
-            // Add event listener for the "No" button
-            $(document).on('click', '.btn-confirm-no', function() {
-                toastr.clear(); // Clear the Toastr notification
-            });
-        });
+            // Unbind previously bound event handlers to prevent multiple executions
+    $(document).off('click', '.btn-confirm-yes').on('click', '.btn-confirm-yes', function() {
+        deleteAttachmentRequest(violationId, attachmentToRemove, index);
+        toastr.clear(); // Clear the Toastr notification
+    });
 
-        // Function to handle confirmation of the deletion
-        function confirmDeletion() {
-            // Perform the deletion process here
-            if (attachmentToRemove) {
-                // Perform AJAX request to delete attachment
-                $.ajax({
-                    type: 'DELETE',
-                    url: '{{ route("tasfile.removeAttachment", $violation->id) }}',
-                    data: {
-                        _token: '{{ csrf_token() }}',
-                        attachment: attachmentToRemove
-                    },
-                    success: function(response) {
-                        toastr.success(response.success); // Display success message
+    $(document).off('click', '.btn-confirm-no').on('click', '.btn-confirm-no', function() {
+        toastr.clear(); // Clear the Toastr notification
+    });
+        }
+
+        // Function to send AJAX request to delete attachment
+        function deleteAttachmentRequest(violationId, attachmentToRemove, index) {
+            var fetchUrl = '{{ route("tasfile.removeAttachment", ["id" => "ID_PLACEHOLDER"]) }}'.replace('ID_PLACEHOLDER', violationId);
+
+            $.ajax({
+                type: 'DELETE',
+                url: fetchUrl,
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    attachment: attachmentToRemove
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#attachment_row_' + violationId + '_' + index).remove();
+                        toastr.success(response.success);
                         // Remove the deleted attachment from the DOM
-                        $('button[data-attachment="' + attachmentToRemove + '"]').closest('.input-group').remove();
-                        toastr.clear(); // Clear the Toastr notification
-                    },
-                    error: function(xhr, status, error) {
-                        toastr.error(xhr.responseJSON.message); // Display error message
-                        toastr.clear(); // Clear the Toastr notification
+                        // reloadModalContent(violationId);
+                    } else {
+                        toastr.error(response.error);
                     }
-                });
-            }
+                },
+                error: function(xhr, status, error) {
+                    toastr.error('Failed to remove attachment.');
+                    console.error('Error:', error);
+                }
+            });
         }
     });
-</script>
-<script>
+
     function deleteRemark(violationId, index) {
     $.ajax({
         url: '{{ route('edit.deleteremarks') }}',
@@ -671,7 +611,7 @@ function editViolation(violationId, index) {
             // Remove the HTML element of the deleted remark
             $('#remark_row_' + violationId + '_' + index).remove();
             // Show success notification using Toastr
-            toastr.success('Remark deleted successfully');
+            toastr.success(response.success);
         },
         error: function(xhr, status, error) {
             // Handle the error
@@ -680,12 +620,10 @@ function editViolation(violationId, index) {
             toastr.error('An error occurred while deleting the remark');
         }
     });
-}
-
-    
-
+    }
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+
     
   </main><!-- End #main -->
 

@@ -67,9 +67,9 @@
         <i class="bi bi-file-earmark-check"></i><span>Case Archives</span>
       </a>
       <ul class="dropdown-menu" aria-labelledby="casearv">
-        <li><a class="dropdown-item" href="{{ route('admitted.manage') }}"><span class="bi bi-plus-circle"></span> Add</a></li>
-        <li><a class="dropdown-item" href="{{ route('admitted.view') }}"><span class="bi bi-eye"></span> View</a></li>
-        <li><a class="dropdown-item" href="{{ route('update.admit.index') }}"><span class="bi bi-pencil-square"></span> Update</a></li>
+        <li><a class="dropdown-item" href="{{ route('archivesmanage') }}"><span class="bi bi-plus-circle"></span> Add</a></li>
+        <li><a class="dropdown-item" href="{{ route('archivesview') }}"><span class="bi bi-eye"></span> View</a></li>
+        <li><a class="dropdown-item" href="{{ route('updatearchives') }}"><span class="bi bi-pencil-square"></span> Update</a></li>
       </ul>
     </li>
     <li class="nav-item">

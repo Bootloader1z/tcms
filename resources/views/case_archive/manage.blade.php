@@ -45,9 +45,9 @@
         <div class="col-lg-12">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">Contest Case - Input</h5>
+                    <h5 class="card-title">Archives - Input</h5>
                     <!-- Form Start -->
-                    <form method="POST" action="{{ route('submitForm.tas') }}" class="row g-3 needs-validation" novalidate enctype="multipart/form-data">
+                    <form method="POST" action="{{ route('archivessubmit') }}" class="row g-3 needs-validation" novalidate enctype="multipart/form-data">
                         @csrf
                         <div class="col-md-6">
                             <label for="validationTooltipdate" class="form-label">Date Received</label>
@@ -57,10 +57,10 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <label for="validationTooltipCaseno" class="form-label">Case no.</label>
-                            <input type="text" name="case_no" class="form-control" id="validationTooltipCaseno"  required>
+                            <label for="validationTooltipCaseno" class="form-label">TAS no.</label>
+                            <input type="text" name="tas_no" class="form-control" id="validationTooltipCaseno"  required>
                             <div class="invalid-tooltip">
-                                Please enter a valid Case no. (Number only)
+                                Please enter a valid TAS no. (Number only)
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -97,25 +97,25 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-        <label class="form-label">Violation</label>
-        <div class="row g-3">
-            <div class="col-md-9">
-                <input type="text" name="violation" class="form-control" id="validationTooltipViolation" list="violations" autocomplete="off" required>
-                <datalist id="violations">
-                    <!-- Populate options dynamically using PHP or JavaScript -->
-                    @foreach($violations as $violation)
-                        <option value="{{ $violation->code }}">{{ $violation->violation }}</option>
-                    @endforeach
-                </datalist>
-                <div class="invalid-tooltip">
-                    Please provide a violation.
-                </div>
-            </div>
-            <div class="col-md-3 d-flex align-items-end">
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#violationsModal">Choose Violations</button>
-            </div>
-        </div>
-    </div>
+                            <label class="form-label">Violation</label>
+                            <div class="row g-3">
+                                <div class="col-md-9">
+                                    <input type="text" name="violation" class="form-control" id="validationTooltipViolation" list="violations" autocomplete="off" required>
+                                    <datalist id="violations">
+                                        <!-- Populate options dynamically using PHP or JavaScript -->
+                                        @foreach($violations as $violation)
+                                            <option value="{{ $violation->code }}">{{ $violation->violation }}</option>
+                                        @endforeach
+                                    </datalist>
+                                    <div class="invalid-tooltip">
+                                        Please provide a violation.
+                                    </div>
+                                </div>
+                                <div class="col-md-3 d-flex align-items-end">
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#violationsModal">Choose Violations</button>
+                                </div>
+                            </div>
+                        </div>
                         <div class="col-md-6">
                             <label for="validationTooltipStatus" class="form-label">Status</label>
                             <select name="status" class="form-control" id="validationTooltipStatus" required>

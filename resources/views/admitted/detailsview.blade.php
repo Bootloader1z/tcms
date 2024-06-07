@@ -110,7 +110,7 @@
 
                 <form action="{{ route('admitremark') }}" id="remarksForm" method="POST" class="remarksForm">
                     @csrf
-                    <input type="hidden" name="tas_file_id" value="{{ $admitted->id }}">
+                    <input type="hidden" name="admitted_dataid" value="{{ $admitted->id }}">
                     <div class="mt-3">
                         <label for="remarks" class="form-label">Add Remark</label>
                         <hr>
@@ -155,11 +155,14 @@
 </div>
 
 <div class="modal-footer">
-    <a href="{{ route('print.sub', ['id' => $admitted->id]) }}" class="btn btn-primary" onclick="openInNewTabAndPrint('{{ route('print.sub', ['id' => $admitted->id]) }}'); return false;">
-        <span class="bi bi-printer"></span> Print Subpeona
-    </a>
+    <form action="{{ route('print.sub', ['id' => $admitted->id]) }}" method="GET" target="_blank">
+
+        <button type="submit" class="btn btn-primary " name="details" value="motionrelease1">Manual MR</button>
+        <button type="submit" class="btn btn-primary " name="details" value="motionrelease2">MR</button>
+        <button type="submit" class="btn btn-primary " name="details" value="subpeona">Subpeona</button>
+    </form>
     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#finishModal{{ $admitted->id }}">Finish</button>
-    <form action="{{ route('update.status', ['id' => $admitted->id]) }}" method="POST" style="display:inline;">
+    <form action="{{ route('updateStatusadmitted', ['id' => $admitted->id]) }}" method="POST" style="display:inline;">
         @csrf
         <button type="submit" class="btn btn-warning" name="status" value="settled">Settled</button>
         <button type="submit" class="btn btn-danger" name="status" value="Unsettled">Unsettled</button>

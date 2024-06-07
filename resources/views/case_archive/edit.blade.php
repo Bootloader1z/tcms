@@ -48,7 +48,7 @@
             <thead class="thead-light">
         <tr>
             <th scope="col">Record Status</th>
-            <th scope="col">Admitted No.</th>
+            <th scope="col">Tas No.</th>
             <th scope="col">TOP</th>
             <th scope="col">Driver</th>
             <th scope="col">Apprehending Officer</th>
@@ -76,7 +76,7 @@
                     <span class="text-white"><i class="bi bi-question-circle-fill"></i> Incomplete</span>
                 @endif
             </td>
-            <td class="align-middle">{{ $violation->admittedno }}</td>
+            <td class="align-middle">{{ $violation->tas_no }}</td>
             <td class="align-middle">{{ $violation->top }}</td>
             <td class="align-middle">{{ $violation->driver }}</td>
             <td class="align-middle">{{ $violation->apprehending_officer }}</td>
@@ -203,7 +203,7 @@
 
         // Function to handle deletion request
         function deleteViolation(violationId) {
-            var fetchUrl = '{{ route("delete_admitted_case", ["id" => "ID_PLACEHOLDER"]) }}'.replace('ID_PLACEHOLDER', violationId);
+            var fetchUrl = '{{ route("delete_archives_case", ["id" => "ID_PLACEHOLDER"]) }}'.replace('ID_PLACEHOLDER', violationId);
 
             $.ajax({
                 type: 'DELETE',
@@ -259,7 +259,7 @@
             }
         });
     }
-    const fetchViolationUrl = @json(route('detailsadmittededit', ['id' => 'ID_PLACEHOLDER']));
+    const fetchViolationUrl = @json(route('detailsarchivesedit', ['id' => 'ID_PLACEHOLDER']));
 
     function initializeModalScripts(modalId) {
         // Handle remarks form submission
@@ -480,7 +480,7 @@
 
     // Function to handle deleting a violation
     function deleteViolationRequest(violationId, index) {
-        var fetchUrl = '{{ route("delete_edit_violation_admitted", ["id" => "ID_PLACEHOLDER"]) }}'.replace('ID_PLACEHOLDER', violationId);
+        var fetchUrl = '{{ route("delete_edit_violation", ["id" => "ID_PLACEHOLDER"]) }}'.replace('ID_PLACEHOLDER', violationId);
 
         $.ajax({
             type: 'DELETE',
@@ -572,7 +572,7 @@
 
         // Function to send AJAX request to delete attachment
         function deleteAttachmentRequest(violationId, attachmentToRemove, index) {
-            var fetchUrl = '{{ route("removeAttachmentadmitted", ["id" => "ID_PLACEHOLDER"]) }}'.replace('ID_PLACEHOLDER', violationId);
+            var fetchUrl = '{{ route("removeAttachmentarchives", ["id" => "ID_PLACEHOLDER"]) }}'.replace('ID_PLACEHOLDER', violationId);
 
             $.ajax({
                 type: 'DELETE',
@@ -601,7 +601,7 @@
 
     function deleteRemark(violationId, index) {
     $.ajax({
-        url: '{{ route('deleteRemark_admitted') }}',
+        url: '{{ route('deleteRemark_archives') }}',
         type: 'POST', // Change POST to PUT
         data: {
             violation_id: violationId,
@@ -632,3 +632,4 @@
 </body>
 
 </html>
+

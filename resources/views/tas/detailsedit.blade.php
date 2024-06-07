@@ -50,10 +50,9 @@
                             @foreach(json_decode($recentViolationsToday->violation) as $index => $recentViolationsTodayItem)
                                 <tr id="violationField{{ $recentViolationsToday->id }}_{{ $index }}">
                                     <td>
-                                        <input type="text" class="form-control" id="violation{{ $recentViolationsToday->id }}_{{ $index }}" name="violations[]" value="{{ $recentViolationsTodayItem }}" list="suggestions">
+                                        <input type="text" class="form-control" id="violation{{ $recentViolationsToday->id }}_{{ $index }}" name="violations[]" value="{{ $recentViolationsTodayItem }}" list="suggestions" readonly>
                                     </td>
                                     <td>
-                                        <button type="button" class="btn btn-success " onclick="editViolation('{{ $recentViolationsToday->id }}', {{ $index }})">Save Edit</button>
                                         <button type="button" class="btn btn-danger bi bi-trash3-fill" onclick="deleteViolation('{{ $recentViolationsToday->id }}', {{ $index }})"></button>
                                     </td>
                                 </tr>
@@ -74,7 +73,6 @@
             </div>
         </div>
     </div>
-
     <div class="row mt-4">
         <div class="col-md-12">
             <!-- Additional details section -->
@@ -105,93 +103,66 @@
                             <input type="text" class="form-control" id="contactNo{{ $recentViolationsToday->id }}" name="contact_no" value="{{ $recentViolationsToday->contact_no }}">
                         </td>
                     </tr>
-                  <tr>
-    <th>Remarks</th>
-    <td>
-        
-            @foreach ($remarks as $index => $remark)
-                <div class="row mb-2" id="remark_row_{{ $recentViolationsToday->id }}_{{ $index }}">
-                    <div class="col-md-12">
-                        <div class="input-group">
-                            <span class="input-group-text bi bi-clipboard-check"></span>
-                            <input type="text" class="form-control" id="text{{ $recentViolationsToday->id }}_{{ $index }}" name="remarks[{{ $index }}]" value="{{ str_replace(['"', '[', ']'], '', $remark) }}" placeholder="Remark">
-                            <button type="button" class="btn btn-danger bi bi-trash3-fill" onclick="deleteRemark('{{ $recentViolationsToday->id }}', {{ $index }})"></button>
-                        </div>
-                    </div>
-                </div>
-            @endforeach
-       
-    </td>
-</tr>
+                    <tr>
+                        <th>Remarks</th>
+                        <td>
+                            @foreach ($remarks as $index => $remark)
+                                <div class="row mb-2" id="remark_row_{{ $recentViolationsToday->id }}_{{ $index }}">
+                                    <div class="col-md-12">
+                                        <div class="input-group">
+                                            <span class="input-group-text bi bi-clipboard-check"></span>
+                                            <input type="text" class="form-control" id="text{{ $recentViolationsToday->id }}_{{ $index }}" name="remarks[{{ $index }}]" value="{{ str_replace(['"', '[', ']'], '', $remark) }}" placeholder="Remark">
+                                            <button type="button" class="btn btn-danger bi bi-trash3-fill" onclick="deleteRemark('{{ $recentViolationsToday->id }}', {{ $index }})"></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
     </div>
 
   
- <hr>
+    <hr>
 
-  <!-- File Attachments Section -->
-  <div class="row mt-4">
-                            <div class="col-md-12">
-                                <h6 class="fw-bold mb-3">File Attachments</h6>
-                                @php
-                                    $attachments = json_decode($recentViolationsToday->file_attach, true);
-                                @endphp
+    @php
+    $attachments = json_decode($recentViolationsToday->file_attach, true);
+    @endphp
 
-                                @if (!empty($attachments))
-                                    @foreach ($attachments as $attachment)
-                                        <div class="input-group mt-2">
-                                            <input type="text" class="form-control" value="{{ $attachment }}" readonly>
-                                           <!-- Button to trigger the deletion confirmation -->
-                    <div class="input-group-append">
-                         <button type="button" class="btn btn-danger bi bi-trash3-fill delete-attachment" data-attachment="{{ $attachment }}">Delete</button>
-                    </div>
-                                        </div>
-                                    @endforeach
-                                @endif
- 
-        <div class="input-group mt-2">
-            <input type="file" class="form-control" name="file_attach_existing[]" multiple>
-            <button type="submit" class="btn btn-primary">Attach Files</button>
-        </div>
- 
- 
-                           </div>
-                        </div>
-                    </div>
+    @if (!empty($attachments))
+    @foreach ($attachments as $index => $attachment)
+        <div class="row mb-2" id="attachment_row_{{ $recentViolationsToday->id }}_{{ $index }}">
+            <div class="col-md-12">
+                <div class="input-group">
+                    <span class="input-group-text bi bi-paperclip"></span>
+                    <input type="text" class="form-control" id="attachmentText{{ $recentViolationsToday->id }}_{{ $index }}" name="attachments[{{ $index }}]" value="{{ $attachment }}" readonly>
+                    <button type="button" class="btn btn-danger bi bi-trash3-fill delete-attachment" data-violation-id="{{ $recentViolationsToday->id }}" data-attachment="{{ $attachment }}" data-index="{{ $index }}"></button>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                  
-                            <button type="submit" class="btn btn-success ">Save changes</button>
- 
-                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal{{ $recentViolationsToday->id }}">Delete Case</button>
-                </div>
-                </form>
+            </div>
         </div>
+    @endforeach
+    @endif
+
+    <div class="input-group mt-2">
+    <input type="file" class="form-control" name="file_attach_existing[]" multiple>
     </div>
-</div>
 
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    
+                                {{-- <button type="submit" class="btn btn-success ">Save changes</button> --}}
+                                <button type="button" class="btn btn-primary" onclick="saveChangesAndReloadModal({{ $recentViolationsToday->id }})">Save changes</button>
 
-<div class="modal fade" id="confirmDeleteModal{{ $recentViolationsToday->id }}" tabindex="-1" aria-labelledby="confirmDeleteModalLabel{{ $recentViolationsToday->id }}" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="confirmDeleteModalLabel{{ $recentViolationsToday->id }}">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to delete this Case?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form action="{{ route('violations.delete', ['id' => $recentViolationsToday->id]) }}" method="POST">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-danger bi bi-trash"> </button>
-                </form>
+    
+                                <button type="button" class="btn btn-danger delete-cases" data-violation-id="{{ $recentViolationsToday->id }}">Delete Case</button>
+
+                    </div>
+                    </form>
             </div>
         </div>
     </div>
-</div>
+
+
+

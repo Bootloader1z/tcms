@@ -5,13 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class admitted extends Model
+class archives extends Model
 {
-
-    protected $table = 'admitteds';
-
+    protected $table = 'archives';
     protected $fillable = [
-        'admittedno',
+        'tas_no',
         'top',
         'driver',
         'apprehending_officer',
@@ -28,6 +26,7 @@ class admitted extends Model
         'fine_fee',
         'symbols', 
     ];
+
     public function setofficerAttribute($value)
     {
         $this->attributes['apprehending_officer'] = strtoupper($value);
@@ -125,7 +124,7 @@ public function relatedViolations()
 
             foreach ($fillableAttributes as $attribute) {
                 // Skip updating non-existent columns
-                if (!Schema::hasColumn('tas_files', $attribute)) {
+                if (!Schema::hasColumn('archives', $attribute)) {
                     continue;
                 }
 
@@ -165,4 +164,5 @@ public function relatedViolations()
             $this->save();
         }
     }
+   
 }

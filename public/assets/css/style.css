@@ -1775,4 +1775,9 @@ ul.list-unstyled li {
 
 .toast.toast-warning {
     background-color: #ffc107;
+}  th {
+  background-color: blue;
+  color: white;
+  padding: 10px;
+  text-align: left;
 }

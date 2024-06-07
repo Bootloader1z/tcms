@@ -21,6 +21,7 @@ use App\Models\G5ChatMessage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Log;
+use App\Models\archives;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -38,7 +39,6 @@ Route::get('/', function () {
 
 Route::get('/loginpage', [AuthController::class, 'loadlogin'])->name('login');
 Route::post('/loginpost', [AuthController::class, 'login'])->name('login.submit');
-
 Route::get('/registerpage', [AuthController::class, 'loadregister'])->name('register');
 Route::post('/registerpost', [AuthController::class, 'register'])->name('register.submit');
 Route::get('/logout', [AuthController::class, 'logoutx'])->name('logout');
@@ -46,156 +46,170 @@ Route::get('/logout', [AuthController::class, 'logoutx'])->name('logout');
 // Middleware routes for authenticated users
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'indexa'])->name('dashboard');
+
+    // =============== ANALYTICS 
+
     Route::get('/analytics', [DashboardController::class, 'analyticsDash'])->name('analytics.index');
-    Route::get('/tables', [DashboardController::class, 'tables'])->name('tables');
-    Route::get('/manageTAS', [DashboardController::class, 'tasManage'])->name('tas.manage');
-    Route::get('/viewTAS', [DashboardController::class, 'tasView'])->name('tas.view');
-    Route::get('/dzxccczxc', [DashboardController::class, 'tasfetch'])->name('tas.fetch');
-    Route::get('/archives', [DashboardController::class, 'caseIndex'])->name('case.view');
-    Route::post('/manageTAS', [DashboardController::class, 'submitForm'])->name('submitForm.tas');
-    Route::get('/admitTAS', [DashboardController::class, 'admitview'])->name('admitted.view');
-    Route::get('/admitTAS/admit.manageform', [DashboardController::class, 'admitmanage'])->name('admitted.manage');
-    Route::post('/admitTAS/admit.manageform', [DashboardController::class, 'admittedsubmit'])->name('admittedsubmit.tas');
-    Route::get('/apprehendingofficer', [DashboardController::class, 'officergg'])->name('see.offi');
-    Route::post('/apprehendingofficer/store.officer', [DashboardController::class, 'save_offi'])->name('save.offi');
-    Route::get('/violation', [DashboardController::class, 'violationadd'])->name('see.vio');
-    Route::post('/violation/save.violation', [DashboardController::class, 'addvio'])->name('add.violation');
-    Route::get('/department/', [DashboardController::class, 'department'])->name('see.dep');
-    
-    Route::post('/department/save.department', [DashboardController::class, 'departmentsave'])->name('save.deps');
-    Route::get('/department/edit', [DashboardController::class, 'editdepp'])->name('edit.deps');
-    Route::get('/editofficer', [DashboardController::class, 'editoffi'])->name('edit.offi');
-    Route::post('/admit-remarks', [DashboardController::class, 'admitremark'])->name('admitremark');
-    Route::post('/viewTAS/save-remarks', [DashboardController::class, 'saveRemarks'])->name('save.remarks');
     Route::get('/getChartData', [DashboardController::class, 'getChartData']);
+    Route::get('/chat', [DashboardController::class, 'chatIndex'])->name('chat.index');
+    Route::post('/chat/storeChat', [DashboardController::class, 'storeMessage'])->name('chat.store');
+    Route::get('/officers/{departmentName}', [DashboardController::class, 'getByDepartmentName']);
+    Route::get('/history', [DashboardController::class, 'historyIndex'])->name('history.index');
+    Route::get('/documents/print/{id}', [DashboardController::class, 'printsub'])->name('print.sub');
+    Route::get('/contested.cases/reports', [DashboardController::class, 'reportsview'])->name('filterByMonth');
+
+    // =============== ANALYTICS
+
+
+
+
+
+    // =============== USER PROFILE
+
     Route::get('users/{id}/profile', [DashboardController::class, 'profile'])->name('profile');
     Route::get('users/{id}/profile/edit', [DashboardController::class, 'edit'])->name('profile.edit');
     Route::put('users/{id}/profile/update', [DashboardController::class, 'update'])->name('profile.update');
     Route::get('users/{id}/profile/change_password', [DashboardController::class, 'change'])->name('profile.change');
     Route::post('users/{id}/profile/update_password', [DashboardController::class, 'updatePassword'])->name('profile.update_password');
     Route::post('users/{id}/profile/profile.picture.save', [DashboardController::class, 'updatePicture'])->name('profile.picture.upload');
-    Route::get('/manage-user', [DashboardController::class, 'management'])->name('user_management');
-    Route::get('/manage-user/users/{id}/edit', [DashboardController::class, 'edit'])->name('users.edit');
-    Route::get('/manage-user/users/{id}/profile', [DashboardController::class, 'profile'])->name('users.profile');
-    Route::delete('/manage-user/users/{user}', [DashboardController::class, 'userdestroy'])->name('users.destroy');
-    Route::get('/manage-user/add-user', [DashboardController::class, 'add_user'])->name('add.user');
-    Route::post('/manage-user/store-user', [DashboardController::class, 'store_user'])->name('store.user');
-    Route::get('/chat', [DashboardController::class, 'chatIndex'])->name('chat.index');
-    Route::post('/chat/storeChat', [DashboardController::class, 'storeMessage'])->name('chat.store');
-    Route::put('/admitted-cases/{id}', [DashboardController::class, 'updateAdmittedCase'])->name('admitted-cases.update');
-    Route::get('/edit/contested', [DashboardController::class, 'updateContest'])->name('update.contest.index');
-    Route::get('/edit/admitted', [DashboardController::class, 'updateAdmitted'])->name('update.admit.index');
-    Route::get('/officers/{departmentName}', [DashboardController::class, 'getByDepartmentName']);
-    Route::put('/edit/contested/violations/{id}', [DashboardController::class, 'updateTas'])->name('violations.updateTas');
-    Route::delete('/edit/contested/violations/{id}', [DashboardController::class, 'deleteTas'])->name('violations.delete');
-    Route::get('/history', [DashboardController::class, 'historyIndex'])->name('history.index');
-    Route::get('/AdmittedEdit', [DashboardController::class, 'editAdmit'])->name('edit.admit');
-    Route::get('/print/{id}', [DashboardController::class, 'printsub'])->name('print.sub');
-    Route::post('/update-status/{id}', [DashboardController::class, 'updateStatus'])->name('update.status');
-    Route::post('/finish-case/{id}', [DashboardController::class, 'finishCase'])->name('finish.case');
-    Route::put('/officers/{id}', [DashboardController::class, 'updateoffi'])->name('officers.update');
-    Route::put('/department/{id}', [DashboardController::class, 'updatedeps'])->name('deps.update');
-    Route::put('/edit/{id}/violation', [DashboardController::class, 'updateviolation'])->name('edit.violation');
+
+    
+  // =============       USER-MANAGEMENT
+
+  Route::get('/manage-user', [DashboardController::class, 'management'])->name('user_management');
+  Route::get('/manage-user/users/{id}/edit', [DashboardController::class, 'edit'])->name('users.edit');
+  Route::get('/manage-user/users/{id}/profile', [DashboardController::class, 'profile'])->name('users.profile');
+  Route::delete('/manage-user/users/{user}', [DashboardController::class, 'userdestroy'])->name('users.destroy');
+  Route::get('/manage-user/add-user', [DashboardController::class, 'add_user'])->name('add.user');
+  Route::post('/manage-user/store-user', [DashboardController::class, 'store_user'])->name('store.user');
+
+ //                     USER-MANAGEMENT============
+
+    // =============    AO/VIOLATION
+
+    Route::get('/department/', [DashboardController::class, 'department'])->name('see.dep');
+    Route::post('/department/save.department', [DashboardController::class, 'departmentsave'])->name('save.deps');
+    Route::get('/department/edit', [DashboardController::class, 'editdepp'])->name('edit.deps');
+    Route::put('/department/{id}/update', [DashboardController::class, 'updatedeps'])->name('deps.update');
+
+    Route::get('/apprehendingofficer', [DashboardController::class, 'officergg'])->name('see.offi');
+    Route::get('/apprehendingofficer/editofficer', [DashboardController::class, 'editoffi'])->name('edit.offi');
+    Route::post('/apprehendingofficer/store.officer', [DashboardController::class, 'save_offi'])->name('save.offi');
+    Route::put('/apprehendingofficer/officers/{id}', [DashboardController::class, 'updateoffi'])->name('officers.update');
+
+    Route::get('/violation', [DashboardController::class, 'violationadd'])->name('see.vio');
+    Route::post('/violation/save.violation', [DashboardController::class, 'addvio'])->name('add.violation');
     Route::get('/edit/violation', [DashboardController::class, 'edivio'])->name('edit.vio');
 
     Route::get('edit/violation/details/{id}', function ($id) {
         $violation = TrafficViolation::findOrFail($id);
         return view('ao.detailsviolation', compact('violation'));
     })->name('fetchingviolation');
-
     Route::get('officer/details/{id}', function ($id) {
         $officer = ApprehendingOfficer::findOrFail($id);
         return view('ao.detailsoffi', compact('officer'));
     })->name('fetchingofficer');
 
-    Route::get('/viewTAS/tasfile{id}/details/', [DashboardController::class, 'detailstasfile'])->name('fetchingtasfile');
-    Route::get('/tasfileedit{id}/details/', [DashboardController::class, 'detailsedit'])->name('fetchingeditfile');
-    Route::get('admitted/details/{id}', [DashboardController::class, 'detailsadmitted'])->name('fetchingadmitted');
-    Route::get('/fetchFinishData/{id}', [DashboardController::class, 'fetchFinishData'])->name('fetchFinishData');
-    Route::post('/finishCase/{id}', [DashboardController::class, 'finishCase'])->name('finish.case');
+    //                  AO/VIOLATION    =============  
 
-    Route::post('/tasfile/{id}/updateViolation', [DashboardController::class, 'UPDATEVIO'])->name('edit.updatevio');
- 
-Route::post('/tasfile/{id}/deleteViolation', [DashboardController::class, 'DELETEVIO'])->name('edit.viodelete');
-Route::post('/delete-remark/',  [DashboardController::class, 'deleteRemark'])->name('edit.deleteremarks');
-Route::post('/tas-files/{id}/add-attachment', [DashboardController::class, 'addAttachment'])->name('add.attachment');
- 
-Route::delete('/tasfile/{id}/remove-attachment', [DashboardController::class, 'removeAttachment'])->name('tasfile.removeAttachment');
+    // archives  =====
+    
+    Route::get('/archives/add', [DashboardController::class, 'archivesmanage'])->name('archivesmanage');
+    Route::post('/archives/save', [DashboardController::class, 'archivessubmit'])->name('archivessubmit');
+    Route::get('/archives/view', [DashboardController::class, 'archivesview'])->name('archivesview');
+    Route::get('/archives/view-{id}/details/', [DashboardController::class, 'detailsarchives'])->name('detailsarchives');
+    Route::post('/archives/view/details/save.remarks', [DashboardController::class, 'saveRemarksarchives'])->name('saveRemarksarchives');
+    Route::post('/archives/view-{id}/details/finish-case', [DashboardController::class, 'finishCase_archives'])->name('finishCase_archives');
+    Route::post('/archives/view-{id}/details/update', [DashboardController::class, 'updateStatusarchives'])->name('updateStatusarchives');
+    //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Route::get('/archives/edit', [DashboardController::class, 'updatearchives'])->name('updatearchives');
+    Route::get('/archives/editview-{id}/details/', [DashboardController::class, 'detailsarchivesedit'])->name('detailsarchivesedit');
+    Route::put('/archives/editview-{id}/details/update.details', [DashboardController::class, 'updatedetailarchives'])->name('updatedetailarchives');
+    Route::delete('/archives/editview-{id}/details/deleteViolation', [DashboardController::class, 'delete_edit_violation'])->name('delete_edit_violation');
+
+    Route::post('/archives/editview/details/delete-remark/',  [DashboardController::class, 'deleteRemark_archives'])->name('deleteRemark_archives');
+    Route::post('/archives/editview-{id}/details/update.violation', [DashboardController::class, 'update_archive_violation'])->name('update_archive_violation');
+    Route::delete('/archives/editview-{id}/details/delete.violation', [DashboardController::class, 'delete_archives'])->name('delete_archives_case');
+    Route::delete('/archives/edit-{id}/violations/remove-attachment', [DashboardController::class, 'removeAttachmentarchives'])->name('removeAttachmentarchives');
+
+    //  =====archives  //
+
+    // =============== ADMIT CASES
+
+    Route::get('/admitTAS', [DashboardController::class, 'admitview'])->name('admitted.view');
+    Route::get('/admitTAS/admit.manageform', [DashboardController::class, 'admitmanage'])->name('admitted.manage');
+    Route::post('/admitTAS/admit.manageform', [DashboardController::class, 'admittedsubmit'])->name('admittedsubmit.tas');
+    Route::post('/admitTAS/admit-remarks', [DashboardController::class, 'admitremark'])->name('admitremark');
+    Route::put('/admitTAS/admitted-cases/{id}', [DashboardController::class, 'updateAdmittedCase'])->name('admitted-cases.update');
+    Route::get('/admitTAS/AdmittedEdit', [DashboardController::class, 'editAdmit'])->name('edit.admit');
+    Route::post('/admitTAS/view-{id}/details/update', [DashboardController::class, 'updateStatusadmitted'])->name('updateStatusadmitted');
+    Route::post('/admitTAS/view-{id}/details/finish-case', [DashboardController::class, 'finishCase_admitted'])->name('finishCase_admitted');
+    
+    Route::get('/admitTAS/admit/details/{id}', [DashboardController::class, 'detailsadmitted'])->name('fetchingadmitted');
+    //------------ MISSING UPDATE CASES
+    Route::get('/admitTAS/edit', [DashboardController::class, 'updateAdmitted'])->name('update.admit.index');
+    Route::get('/admitTAS/editview-{id}/details/', [DashboardController::class, 'detailsadmittededit'])->name('detailsadmittededit');
+    Route::put('/admitTAS/editview-{id}/details/update.details', [DashboardController::class, 'updatedetailadmitted'])->name('updatedetailadmitted');
+    Route::delete('/admitTAS/editview-{id}/details/deleteViolation', [DashboardController::class, 'delete_edit_violation_admitted'])->name('delete_edit_violation_admitted');
+    Route::post('/admitTAS/editview/details/delete-remark/',  [DashboardController::class, 'deleteRemark_admitted'])->name('deleteRemark_admitted');
+    Route::delete('/admitTAS/editview-{id}/details/delete.violation', [DashboardController::class, 'delete_admitted'])->name('delete_admitted_case');
+    Route::delete('/admitTAS/edit-{id}/violations/remove-attachment', [DashboardController::class, 'removeAttachmentadmitted'])->name('removeAttachmentadmitted');
+    //                 ADMIT CASES ===============
+
+    // ====================tasFile 
+
+    Route::get('/contested/manageTAS', [DashboardController::class, 'tasManage'])->name('tas.manage');
+    Route::post('/contested/manageTAS/save', [DashboardController::class, 'submitForm'])->name('submitForm.tas');
+    Route::get('/contested/viewTAS', [DashboardController::class, 'tasView'])->name('tas.view');
+    Route::get('/contested/viewTAS/tasfile-{id}/details/view', [DashboardController::class, 'detailstasfile'])->name('fetchingtasfile');
+    Route::post('/contested/viewTAS/tasfile/details/save-remarks', [DashboardController::class, 'saveRemarks'])->name('save.remarks');
+    Route::post('/contested/viewTAS/tasfile-{id}/details/update-status', [DashboardController::class, 'updateStatus'])->name('update.status');
+    Route::post('/contested/viewTAS/tasfile-{id}/details/finish.case', [DashboardController::class, 'finishCase'])->name('finish.case');
+    // -------------------------------- end of viewtas ------------------------------------------------------------------------------------
+    Route::get('/contested/edit/view', [DashboardController::class, 'updateContest'])->name('update.contest.index');
+    Route::get('/contested/edit/tasfile-{id}/view/details', [DashboardController::class, 'detailsedit'])->name('fetchingeditfile');
+    Route::put('/contested/edit/tasfile-{id}/view/details/update', [DashboardController::class, 'updateTas'])->name('violations.updateTas');
+    Route::post('/contested/edit/tasfile-{id}/view/details/updateViolation', [DashboardController::class, 'UPDATEVIO'])->name('edit.updatevio');
+    Route::delete('/contested/edit/tasfile-{id}/view/details/deleteViolation', [DashboardController::class, 'DELETEVIO'])->name('edit.viodelete');
+    Route::delete('/contested/edit/tasfile-{id}/view/details/remove-attachment', [DashboardController::class, 'removeAttachment'])->name('tasfile.removeAttachment');
+    Route::post('/contested/edit/tasfile/view/details/delete-remark/',  [DashboardController::class, 'deleteRemark'])->name('edit.deleteremarks');
+    Route::delete('/contested/edit/tasfile-{id}/view/details/deleteCase', [DashboardController::class, 'deleteTas'])->name('violations.delete');
+    //     tasFile =============================
 });
 
-Route::get('/fetch-remarks/?id={id}', [DashboardController::class, 'fetchRemarks'])->name('fetch.remarks'); 
 
 Route::get('/subpoena', function () { 
-    $tasFile = TasFile::findOrFail(115);
-    $changes = $tasFile;
-    $officerName = $changes->apprehending_officer;
-    $officers = ApprehendingOfficer::where('officer', $officerName)->get();
+    // Get the month parameter from the request, default to current month if not provided
 
-    if (!empty($changes->violation)) {
-        $violations = json_decode($changes->violation);
-        if ($violations !== null) {
-            $relatedViolations = TrafficViolation::whereIn('code', $violations)->get();
+    // $selectedMonth = $request->input('month', Carbon::now()->format('Y-m'));
+    $selectedMonth = "2023-12";
+
+    // Determine the start and end dates of the selected month
+    $startDate = Carbon::parse($selectedMonth . '-01')->startOfMonth();
+    $endDate = Carbon::parse($selectedMonth . '-01')->endOfMonth();
+
+    // Query TasFiles with date range
+    $tasFiles = TasFile::whereBetween('date_received', [$startDate, $endDate])->get();
+
+    // Process each TasFile to attach related violations
+    foreach ($tasFiles as $tasFile) {
+        $violations = json_decode($tasFile->violation);
+        if ($violations) {
+            if (is_array($violations)) {
+                $relatedViolations = TrafficViolation::whereIn('code', $violations)->get();
+            } else {
+                $relatedViolations = TrafficViolation::where('code', $violations)->get();
+            }
         } else {
-            $relatedViolations = [];
+            $relatedViolations = collect(); // Empty collection if no violations
         }
-    } else {
-        $relatedViolations = [];
+        $tasFile->relatedViolations = $relatedViolations;
     }
 
-    $holidays = [
-        '01-01', // New Year's Day
-        '04-09', // Araw ng Kagitingan
-        '05-01', // Labor Day
-        '06-12', // Independence Day
-        '08-26', // National Heroes Day
-        '11-30', // Bonifacio Day
-        '12-25', // Christmas Day
-        '02-25', // EDSA People Power Revolution Anniversary
-        '08-21', // Ninoy Aquino Day
-        '11-01', // All Saints' Day
-        '11-02', // All Souls' Day
-        '12-30', // Rizal Day
-        '02-14', // Valentine's Day
-        '03-08', // International Women's Day
-        '10-31', // Halloween
-        '04-20', // 420 (Cannabis Culture)
-        '07-04', // Independence Day (United States)
-        '05-14', // Additional holiday declared by the government
-        '11-15', // Regional holiday
-    ];
+    // Format monthYear based on the selected month
+    $monthYear = strtoupper(Carbon::parse($selectedMonth)->format('F Y'));
 
-    // Get the current date
-    $startDate = Carbon::now();
-    $formattedDate = $startDate->format('F j, Y');
-
-    // Calculate the new date excluding weekends and holidays
-    $currentDate = clone $startDate; // Clone to avoid modifying the original start date
-    $numDays = 3;
-
-    while ($numDays > 0) {
-        $currentDate->addDay();
-
-        // Check if the current day is a weekend or a holiday
-        if ($currentDate->isWeekend() || in_array($currentDate->format('m-d'), $holidays)) {
-            continue; // Skip weekends and holidays
-        }
-
-        $numDays--;
-    }
-
-    $endDate = $currentDate->format('F j, Y');
-
-    $compactData = [
-        'changes' => $changes,
-        'officers' => $officers,
-        'relatedViolations' => $relatedViolations,
-        'date' => $formattedDate,
-        'hearing' => $endDate,
-    ];
-
-    // dd($compactData);
-
-    return view('subpoena', compact('tasFile', 'compactData'));
+    return view('subpoena', ['tasFiles' => $tasFiles, 'monthYear' => $monthYear]);
 });
 
 // Staff routes

@@ -8,14 +8,12 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
-    public function up()
+    public function up(): void
     {
-        Schema::create('tas_files', function (Blueprint $table) {
+        Schema::create('archives', function (Blueprint $table) {
             $table->id();
-            $table->string('case_no')->nullable();
+            $table->string('tas_no')->nullable();
             $table->string('top')->nullable();
             $table->string('apprehending_officer')->nullable();
             $table->string('driver')->nullable();
@@ -27,7 +25,7 @@ return new class extends Migration
             $table->text('remarks')->nullable();
             $table->text('file_attach')->nullable(); 
             $table->text('history')->nullable(); 
-            $table->enum('status', ['closed', 'in-progress', 'settled', 'unsettled'])->default('in-progress');
+            $table->enum('status', ['closed', 'in-progress', 'settled', 'unsettled'])->default('unsettled');
             $table->string('typeofvehicle')->nullable();
             $table->decimal('fine_fee', 8, 2)->nullable(); 
             $table->string('symbols')->nullable();
@@ -37,11 +35,9 @@ return new class extends Migration
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
-    public function down()
+    public function down(): void
     {
-        Schema::dropIfExists('tas_files');
+        Schema::dropIfExists('archives');
     }
 };
