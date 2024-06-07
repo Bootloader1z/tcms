@@ -38,9 +38,7 @@ Route::get('/', function () {
 })->name('landpage');
 
 Route::get('/loginpage', [AuthController::class, 'loadlogin'])->name('login');
-Route::post('/loginpost', [AuthController::class, 'login'])->name('login.submit');
-Route::get('/registerpage', [AuthController::class, 'loadregister'])->name('register');
-Route::post('/registerpost', [AuthController::class, 'register'])->name('register.submit');
+Route::post('/loginpost', [AuthController::class, 'login'])->name('login.submit'); 
 Route::get('/logout', [AuthController::class, 'logoutx'])->name('logout');
 
 // Middleware routes for authenticated users

@@ -180,36 +180,54 @@ class DashboardController extends Controller
     public function caseIndex(){
         return view('case_archives');
     }
-    public function reportsview(Request $request){
-        // Get the month parameter from the request, default to current month if not provided
-    $selectedMonth = $request->input('date_received', Carbon::now()->format('Y-m'));
-
-    // Determine the start and end dates of the selected month
-    $startDate = Carbon::parse($selectedMonth . '-01')->startOfMonth();
-    $endDate = Carbon::parse($selectedMonth . '-01')->endOfMonth();
-
-    // Query TasFiles with date range
-    $tasFiles = TasFile::whereBetween('date_received', [$startDate, $endDate])->get();
-
-    // Process each TasFile to attach related violations
-    foreach ($tasFiles as $tasFile) {
-        $violations = json_decode($tasFile->violation);
-        if ($violations) {
-            if (is_array($violations)) {
-                $relatedViolations = TrafficViolation::whereIn('code', $violations)->get();
-            } else {
-                $relatedViolations = TrafficViolation::where('code', $violations)->get();
+    public function reportsview(Request $request) {
+        // Get the month parameter from the request, defaulting to the current month if not provided
+        $selectedMonth = $request->input('date_received', Carbon::now()->format('Y-m'));
+    
+        // Determine the start and end dates of the selected month
+        $startDate = Carbon::parse($selectedMonth . '-01')->startOfMonth();
+        $endDate = Carbon::parse($selectedMonth . '-01')->endOfMonth();
+    
+        // Query TasFiles with date range
+        $tasFiles = TasFile::whereBetween('date_received', [$startDate, $endDate])->get();
+    
+        // Initialize total fine per violation and total fine for all data for the month
+        $totalFinePerViolation = collect();
+        $totalFineForMonth = 0;
+    
+        // Process each TasFile to attach related violations
+        foreach ($tasFiles as $tasFile) {
+            $violations = json_decode($tasFile->violation);
+            $relatedViolations = collect(); // Initialize related violations collection
+    
+            if ($violations) {
+                if (is_array($violations)) {
+                    $relatedViolations = TrafficViolation::whereIn('code', $violations)->get();
+                } else {
+                    $relatedViolations = TrafficViolation::where('code', $violations)->get();
+                }
             }
-        } else {
-            $relatedViolations = collect(); // Empty collection if no violations
+    
+            // Calculating total partial fine per violation for each TasFile
+            $totalFinePerFile = $relatedViolations->sum('fine');
+            $totalFinePerViolation = $totalFinePerViolation->merge($relatedViolations->pluck('fine'));
+    
+            // Update the total fine for all data for the month
+            $totalFineForMonth += $totalFinePerFile;
+    
+            $tasFile->relatedViolations = $relatedViolations;
+            $tasFile->partialFinePerFile = $totalFinePerFile;
         }
-        $tasFile->relatedViolations = $relatedViolations;
-    }
-
-    // Format monthYear based on the selected month
-    $monthYear = strtoupper(Carbon::parse($selectedMonth)->format('F Y'));
-
-    return view('sub.reports', ['tasFiles' => $tasFiles, 'monthYear' => $monthYear]);
+    
+        // Format monthYear based on the selected month
+        $monthYear = strtoupper(Carbon::parse($selectedMonth)->format('F Y'));
+        
+        return view('sub.reports', [
+            'tasFiles' => $tasFiles,
+            'monthYear' => $monthYear,
+            'totalFinePerViolation' => $totalFinePerViolation,
+            'totalFineForMonth' => $totalFineForMonth
+        ]);
     }
     public function tasView(){
         $pageSize = 15; // Define the default page size

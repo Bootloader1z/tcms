@@ -11,7 +11,7 @@ class TrafficViolation extends Model
     use HasFactory;
     protected $table = 'traffic_violations';
 
-    protected $fillable = ['id','code','violation'];
+    protected $fillable = ['id','code','violation', 'fine'];
     
     public function tasFiles()
     {

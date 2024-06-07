@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('code')->nullable();
             $table->text('violation')->nullable();
+            $table->decimal('fine', 12, 2)->nullable(); 
             $table->timestamps();
         });
     }

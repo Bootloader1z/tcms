@@ -81,12 +81,26 @@
                                 @endif
                             </td>
                             <td>{{ is_array($file->plate_no) ? implode(', ', $file->plate_no) : $file->plate_no }}</td>
-                            <td contenteditable="true">{{ number_format($file->fine_fee, 2) }}</td>
+
+                            <td contenteditable="true" data-fine="partial_total">
+                                @if ($file->fine_fee)
+                                    {{ number_format($file->fine_fee, 2) }}
+                                @else
+                                    {{-- @foreach ($file->relatedViolations as $violation)
+                                    {{ strtoupper(number_format($violation->fine, 2)) }}<br>
+                                    @endforeach --}}
+
+                                    {{ number_format($file->partialFinePerFile, 2) }}
+                                @endif
+                            </td>
                             <td>{{ $file->status }}</td>
                         </tr>
+                        
                     @endforeach
                 </tbody>
             </table>
+
+            <h4 id="totalFine" style="text-align: right; display: block; margin-right: 7vh;font-weight: bolder;">Total:</h4>
         </div>
     
         <!-- Page Number Container -->
@@ -95,7 +109,38 @@
     
     
 </body>
-
+<!-- Ensure the 'number_format' function is defined before this script block -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fineCells = document.querySelectorAll('td[data-fine="partial_total"]');
+        const totalFineSpan = document.getElementById('totalFine');
+    
+        // Function to calculate total fine amount
+        function updateTotalFine() {
+            let total = 0;
+    
+            fineCells.forEach(cell => {
+                const fineAmount = parseFloat(cell.textContent.replace(/,/g, ''));
+                if (!isNaN(fineAmount)) {
+                    total += fineAmount;
+                }
+            });
+    
+            totalFineSpan.textContent = "Total: " + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+    
+        // Event listener for input in each fine cell
+        fineCells.forEach(cell => {
+            cell.addEventListener('input', function() {
+                updateTotalFine();
+            });
+        });
+    
+        // Initial calculation on page load
+        updateTotalFine();
+    });
+    </script>
+    
 <!-- jQuery -->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
