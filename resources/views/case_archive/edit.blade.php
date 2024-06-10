@@ -80,14 +80,7 @@
             <td class="align-middle">{{ $violation->top }}</td>
             <td class="align-middle">{{ $violation->driver }}</td>
             <td class="align-middle">{{ $violation->apprehending_officer }}</td>
-            <td class="align-middle">
-                @if ($violation->relatedofficers && $violation->relatedofficers->isNotEmpty())
-                    @foreach ($violation->relatedofficers as $officer)
-                        {{ $officer->department }}
-                        @if (!$loop->last), @endif
-                    @endforeach
-                @endif
-            </td>
+            <td class="align-middle">@foreach ($violation->relatedofficer as $offdep){{$offdep->department}}@endforeach</td>
             <td class="align-middle">{{ $violation->typeofvehicle }}</td>
             
             <td class="align-middle">{{ $violation->transaction_no }}</td>

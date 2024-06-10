@@ -687,17 +687,12 @@ class DashboardController extends Controller
        
         
         // Iterate through each TrafficViolation record
-        foreach ($recentViolationsToday as $violation) {
-            // Extract the name of the apprehending officer for the current TrafficViolation
-            $officerName = $violation->apprehending_officer;
-    
-            // Query the ApprehendingOfficer model for officers with the given name
+        foreach ($recentViolationsToday as $tasFile) {
+            $officerName = $tasFile->apprehending_officer;
             $officersForFile = ApprehendingOfficer::where('officer', $officerName)->get();
-    
-            // Merge the officers into the collection
             $officers = $officers->merge($officersForFile);
-    
- 
+            $tasFile->relatedofficer = $officersForFile;
+            
         }
   
         // Pass data to the view, including the new variable $violationData
@@ -1504,20 +1499,17 @@ public function editdepp(){
         $officers = collect();
        
         
-        // Iterate through each TrafficViolation record
-        foreach ($recentViolationsToday as $violation) {
-            // Extract the name of the apprehending officer for the current TrafficViolation
-            $officerName = $violation->apprehending_officer;
-    
-            // Query the ApprehendingOfficer model for officers with the given name
+        foreach ($recentViolationsToday as $tasFile) {
+            $officerName = $tasFile->apprehending_officer;
             $officersForFile = ApprehendingOfficer::where('officer', $officerName)->get();
-    
-            // Merge the officers into the collection
             $officers = $officers->merge($officersForFile);
-    
- 
+            $tasFile->relatedofficer = $officersForFile;
+            
         }
-  
+
+        // Debugging: Dump the officers collection to check the data
+        // dd($officers);
+        // dd($recentViolationsToday[100]);
         // Pass data to the view, including the new variable $violationData
         return view('tas.edit', compact('recentViolationsToday', 'violation', 'officers'));
     }
@@ -1536,17 +1528,12 @@ public function editdepp(){
        
         
         // Iterate through each TrafficViolation record
-        foreach ($recentViolationsToday as $violation) {
-            // Extract the name of the apprehending officer for the current TrafficViolation
-            $officerName = $violation->apprehending_officer;
-    
-            // Query the ApprehendingOfficer model for officers with the given name
+        foreach ($recentViolationsToday as $tasFile) {
+            $officerName = $tasFile->apprehending_officer;
             $officersForFile = ApprehendingOfficer::where('officer', $officerName)->get();
-    
-            // Merge the officers into the collection
             $officers = $officers->merge($officersForFile);
-    
- 
+            $tasFile->relatedofficer = $officersForFile;
+            
         }
   
         // Pass data to the view, including the new variable $violationData
