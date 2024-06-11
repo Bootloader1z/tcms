@@ -12,9 +12,7 @@
                         <tr>
                             <td>
                                 <div class="input-group">
-                                    <p class="form-control bi bi-bookmark-check-fill">
-                                        {{ str_replace(['"', '[', ']'], '', $remark) }}
-                                    </p>
+                                    <textarea class="form-control bi bi-bookmark-check-fill" rows="3" readonly>{{ str_replace(['"', '[', ']'], '', $remark) }}</textarea>
                                 </div>
                             </td>
                         </tr>

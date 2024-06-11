@@ -1,4 +1,3 @@
-@extends('layouts.title')
 
 @section('title', env('APP_NAME'))
 
@@ -223,7 +222,40 @@
         }
     });
 </script>
+<script>
+    // Function to handle the form submission
+    $('form').submit(function(event) {
+        event.preventDefault(); // Prevent the default form submission
+        
+        var form = $(this); // Get the form element
+        var url = form.attr('action'); // Get the form action URL
+        var method = form.attr('method'); // Get the form submission method
+        var formData = new FormData(this); // Create FormData object to send form data
 
+        // Make AJAX request to the server
+        $.ajax({
+            type: method, // Set the request method
+            url: url, // Set the request URL
+            data: formData, // Set the form data
+            processData: false, // Prevent jQuery from processing the data
+            contentType: false, // Prevent jQuery from setting the content type
+            success: function(response) { // Success callback function
+                // Check if the response contains a success message
+                if (response && response.message) {
+                    // Show Toastr success notification
+                    toastr.success(response.message);
+                }
+            },
+            error: function(xhr, status, error) { // Error callback function
+                // Check if the response contains an error message
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    // Show Toastr error notification
+                    toastr.error(xhr.responseJSON.error);
+                }
+            }
+        });
+    });
+</script>
 <script>
 
         // Function to handle saving changes and reloading modal

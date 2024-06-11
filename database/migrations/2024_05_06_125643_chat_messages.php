@@ -16,6 +16,7 @@ return new class extends Migration
         Schema::create('chat_messages', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Add foreign key constraint to users table
+            $table->foreignId('receiver_id')->nullable()->constrained('users')->onDelete('cascade'); // Add foreign key constraint to users table for receiver
             $table->text('message');
             $table->boolean('is_read')->default(false); // Add is_read column with default value false
             $table->timestamps();

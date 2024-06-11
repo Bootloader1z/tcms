@@ -25,10 +25,11 @@ class TasFile extends Model
         'plate_no',
         'remarks',
         'file_attach',
-        'history',
-        'status', 
         'typeofvehicle',
         'fine_fee',
+        'history',
+        'status', 
+     
         'symbols', 
     ];
 
@@ -120,41 +121,86 @@ public function relatedViolations()
 //     // Convert the comma-separated string of remarks to an array
 //     return $value ? explode(',', $value) : [];
 // }
+public function checkCompleteness()
+{
+    try {
+        // List of fields to check for completeness
+        $fieldsToCheck = [
+            'case_no',
+            'driver',
+            'apprehending_officer',
+            'violation',
+            'date_received',
+            'contact_no',
+            'plate_no',
+            'remarks',
+            'file_attach',
+            'typeofvehicle',
+            'fine_fee'
+        ];
 
-    public function checkCompleteness()
-    {
-        try {
-            $fillableAttributes = $this->getFillable();
-            $incompleteSymbols = [];
-
-            foreach ($fillableAttributes as $attribute) {
-                // Skip updating non-existent columns
-                if (!Schema::hasColumn('tas_files', $attribute)) {
-                    continue;
-                }
-
-                if ($attribute !== 'history' && empty($this->$attribute)) {
-                    $incompleteSymbols[$attribute] = 'incomplete';
-                }
+        // Check if any field is empty
+        $incomplete = false;
+        foreach ($fieldsToCheck as $field) {
+            if (empty($this->$field)) {
+                $incomplete = true;
+                break;
             }
-
-            if (empty($incompleteSymbols)) {
-                $this->symbols = 'complete';
-            } else {
-                $this->symbols = json_encode($incompleteSymbols);
-            }
-
-            $this->save();
-        } catch (\Exception $e) {
-            // Log the error for debugging
-            \Log::error('Error updating symbols attribute: ' . $e->getMessage());
-
-            // You can handle the error based on your requirement
-            // For example, you can throw a custom exception, return a response, or perform any other action.
-            throw new \Exception('Error updating symbols attribute: ' . $e->getMessage());
         }
+
+        // Set symbols attribute accordingly
+        $this->symbols = $incomplete ? 'incomplete' : 'complete';
+        
+        // Save the model
+        $this->save();
+
+        \Log::info('Symbols attribute updated successfully.');
+    } catch (\Exception $e) {
+        \Log::error('Error updating symbols attribute: ' . $e->getMessage());
+        throw new \Exception('Error updating symbols attribute: ' . $e->getMessage());
     }
-      // Method to add a new violation
+}
+
+public function handleDeletion()
+{
+    try {
+        // List of fields to check for deletion
+        $fieldsToCheck = [
+            'case_no',
+            'driver',
+            'apprehending_officer',
+            'violation',
+            'date_received',
+            'contact_no',
+            'plate_no',
+            'remarks',
+            'file_attach',
+            'typeofvehicle',
+            'fine_fee'
+        ];
+
+        // Check if any field is empty after deletion
+        $incomplete = false;
+        foreach ($fieldsToCheck as $field) {
+            if (!isset($this->$field) || empty($this->$field)) {
+                $incomplete = true;
+                break;
+            }
+        }
+
+        // Set symbols attribute accordingly
+        if ($incomplete) {
+            $this->symbols = 'incomplete';
+            $this->save();
+        }
+
+        \Log::info('Symbols attribute updated to incomplete due to data deletion.');
+    } catch (\Exception $e) {
+        \Log::error('Error handling deletion: ' . $e->getMessage());
+        throw new \Exception('Error handling deletion: ' . $e->getMessage());
+    }
+}
+ 
       public function addViolation($newViolation)
     {
         // Retrieve existing violations

@@ -13,12 +13,18 @@ class G5ChatMessage extends Model
 
     protected $fillable = [
         'user_id',
+        'receiver_id',
         'message',
+
         'is_read', // Include the is_read column in the fillable array
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+    public function receiver()
+    {
+        return $this->belongsTo(User::class, 'receiver_id');
     }
 }

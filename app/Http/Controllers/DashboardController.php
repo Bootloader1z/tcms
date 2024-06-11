@@ -114,24 +114,6 @@ class DashboardController extends Controller
         $violation->update($validatedData);
         return redirect()->back()->with('success', 'Violation updated successfully.');
     }
-    public function chatIndex(){
-        $messages = G5ChatMessage::latest()->with('user')->limit(10)->get();
-        $user = Auth::user();
-        $name = $user->name;
-        $department = $user->department;
-        $unreadMessageCount = G5ChatMessage::where('is_read', false)->count();
-        return view('chat',compact('unreadMessageCount','messages', 'name', 'department'));
-    }
-    public function storeMessage(Request $request){
-        $request->validate([
-            'message' => 'required|string',
-        ]);
-        $message = new G5ChatMessage();
-        $message->message = $request->input('message');
-        $message->user_id = Auth::id();
-        $message->save();
-        return redirect()->back()->with('success', 'Message sent successfully.');
-    }
     public function getByDepartmentName($departmentName){
         $officers = ApprehendingOfficer::where('department', $departmentName)->get();
         return response()->json($officers);
@@ -229,12 +211,21 @@ class DashboardController extends Controller
             'totalFineForMonth' => $totalFineForMonth
         ]);
     }
-    public function tasView(){
+       
+public function tasView()
+{
+    try {
         $pageSize = 15; // Define the default page size
         $tasFiles = TasFile::all()->sortByDesc('case_no');
         $officers = collect();
         
         foreach ($tasFiles as $tasFile) {
+            // Update completeness symbols for each TasFile
+            $tasFile->checkCompleteness();
+
+            // Handle deletion case for each TasFile
+            $tasFile->handleDeletion();
+
             $officerName = $tasFile->apprehending_officer;
             $officersForFile = ApprehendingOfficer::where('officer', $officerName)->get();
             $officers = $officers->merge($officersForFile);
@@ -266,7 +257,50 @@ class DashboardController extends Controller
         }
 
         return view('tas.view', compact('tasFiles'));
+    } catch (\Exception $e) {
+        \Log::error('Error viewing TAS: ' . $e->getMessage());
+        throw new \Exception('Error viewing TAS: ' . $e->getMessage());
     }
+}
+    
+    // public function tasView(){
+    //     $pageSize = 15; // Define the default page size
+    //     $tasFiles = TasFile::all()->sortByDesc('case_no');
+    //     $officers = collect();
+        
+    //     foreach ($tasFiles as $tasFile) {
+    //         $officerName = $tasFile->apprehending_officer;
+    //         $officersForFile = ApprehendingOfficer::where('officer', $officerName)->get();
+    //         $officers = $officers->merge($officersForFile);
+    //         $tasFile->relatedofficer = $officersForFile;
+            
+    //         if (is_string($tasFile->remarks)) {
+    //             $remarks = json_decode($tasFile->remarks, true);
+    //             if ($remarks === null) {
+    //                 $remarks = [];
+    //             }
+    //         } else if (is_array($tasFile->remarks)) {
+    //             $remarks = $tasFile->remarks;
+    //         } else {
+    //             $remarks = [];
+    //         }
+    //         $tasFile->remarks = $remarks;
+
+    //         $violations = json_decode($tasFile->violation);
+    //         if ($violations) {
+    //             if (is_array($violations)) {
+    //                 $relatedViolations = TrafficViolation::whereIn('code', $violations)->get();
+    //             } else {
+    //                 $relatedViolations = TrafficViolation::where('code', $violations)->get();
+    //             }
+    //         } else {
+    //             $relatedViolations = [];
+    //         }
+    //         $tasFile->relatedViolations = $relatedViolations;
+    //     }
+
+    //     return view('tas.view', compact('tasFiles'));
+    // }
     public function admitmanage(){
         $officers = ApprehendingOfficer::select('officer', 'department')->get();
         // dd($recentViolationsToday[1]);
@@ -1256,11 +1290,11 @@ public function editdepp(){
     public function updateTas(Request $request, $id) {
         try {
             // Find the violation by ID
-            $violation = tasFile::findOrFail($id);
-        
+            $violation = TasFile::findOrFail($id);
+
             // Validate the incoming request data
             $validatedData = $request->validate([
-                'tas_no' => 'nullable|string|max:255',
+                'case_no' => 'nullable|string|max:255',
                 'top' => 'nullable|string|max:255',
                 'driver' => 'nullable|string|max:255',
                 'apprehending_officer' => 'nullable|string|max:255',
@@ -1268,34 +1302,37 @@ public function editdepp(){
                 'transaction_no' => 'nullable|string|max:255',
                 'date_received' => 'nullable|date',
                 'plate_no' => 'nullable|string|max:255',
-                'status' => 'nullable|string|max:255',
                 'contact_no' => 'nullable|string|max:255',
                 'remarks.*.text' => 'nullable|string',
-                'file_attach_existing.*' => 'nullable|file|max:512000', // Added file validation rules
+                'file_attach_existing.*' => 'nullable|file', 
+                'fine_fee' => 'nullable|numeric', 
+                'typeofvehicle' => 'nullable|string|max:255',  
+                'status' => 'nullable|string|in:in-progress,closed,settled,unsettled', 
             ]);
-        
-            // Attach files
-            if ($request->hasFile('file_attach_existing')) {
-                // Retrieve existing file attachments and decode them
-                $existingFilePaths = json_decode($violation->file_attach, true) ?? [];
-        
-                $cx = count($existingFilePaths) + 1;
-                foreach ($request->file('file_attach_existing') as $file) {
-                    // Check if the file was actually uploaded
-                    if ($file->isValid()) {
-                        $x = "CS-".$violation->case_no . "_documents_" . $cx . "_";
-                        $fileName = $x . time();
-                        $file->storeAs('attachments', $fileName, 'public');
-                        $existingFilePaths[] = 'attachments/' . $fileName; // Append the new file path
-                        $cx++;
-                    } else {
-                        // File upload failed, return an error response
-                        return response()->json(['error' => 'Failed to upload files.'], 500);
-                    }
-                }
-                $violation->file_attach = json_encode($existingFilePaths); // Save the updated array
-            }
-        
+
+       // Attach files
+if ($request->hasFile('file_attach_existing')) {
+    // Retrieve existing file attachments and decode them
+    $existingFilePaths = json_decode($violation->file_attach, true) ?? [];
+    
+    $cx = count($existingFilePaths) + 1;
+    foreach ($request->file('file_attach_existing') as $file) {
+        // Check if the file was actually uploaded
+        if ($file->isValid()) {
+            $x = "CS-".$violation->case_no . "_documents_" . $cx . "_";
+            $fileName = $x . time();
+            $file->storeAs('attachments', $fileName, 'public');
+            $existingFilePaths[] = 'attachments/' . $fileName; // Append the new file path
+            $cx++;
+        } else {
+            // File upload failed, return an error response
+            return back()->with('error', 'Failed to upload files.');
+        }
+    }
+    $violation->file_attach = json_encode($existingFilePaths); // Save the updated array
+}
+
+
             // Process remarks
             if (isset($validatedData['remarks']) && is_array($validatedData['remarks'])) {
                 $remarksArray = [];
@@ -1304,7 +1341,7 @@ public function editdepp(){
                 }
                 $validatedData['remarks'] = json_encode($remarksArray);
             }
-        
+
             // Merge new violations into existing violations array
             if (!empty($validatedData['violation'])) {
                 $existingViolations = json_decode($violation->violation, true) ?? [];
@@ -1313,28 +1350,27 @@ public function editdepp(){
                 });
                 $validatedData['violation'] = json_encode(array_unique(array_merge($existingViolations, $newViolations)));
             }
-        
+
             // Update the violation with validated data
             $violation->update($validatedData);
-        
-            // If new violations were added, add them to the tasFile model
+
+            // If new violations were added, add them to the TasFile model
             if (!empty($newViolations)) {
                 foreach ($newViolations as $newViolation) {
                     $violation->addViolation($newViolation);
                 }
                 // Refresh the model after adding new violations
-                $violation = tasFile::findOrFail($id);
+                $violation = TasFile::findOrFail($id);
             }
-        
-            // Return JSON response with updated violation details
-            return response()->json(['success' => "Update Successfully"], 200);
-        
+
+            return back()->with('success', 'Violation updated successfully')->with('status', 201);
+
         } catch (\Exception $e) {
             // Log the error
             Log::error('Error updating Violation: ' . $e->getMessage());
-        
-            // Set error message and return JSON response
-            return response()->json(['error' => 'Error updating Violation: ' . $e->getMessage()], 500);
+
+            // Set error message
+            return back()->with('error', 'Error updating Violation: ' . $e->getMessage());
         }
     }
     public function updateStatus(Request $request, $id){
@@ -1457,62 +1493,43 @@ public function editdepp(){
             return response()->json(['error' => 'Error deleting Violation: ' . $e->getMessage()], 500);
         }
     }
-    
-    public function analyticsDash(){
-        // Fetch the data from the database
-        $data = TasFile::select(
-            DB::raw('MONTH(date_received) as month'),
-            DB::raw('COUNT(*) as count')
-        )
-        ->groupBy(DB::raw('MONTH(date_received)'))
-        ->get();
-
-        // Define colors for each month
-        $colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ff8000', '#8000ff', '#0080ff', '#ff0080', '#80ff00', '#00ff80'];
-
-        // Prepare the data for the chart
-        $months = [];
-        $counts = [];
-        $backgroundColors = [];
-        foreach ($data as $index => $item) {
-            $monthDateTime = \DateTime::createFromFormat('!m', $item->month);
-            if ($monthDateTime !== false) { // Check if DateTime object was created successfully
-                $months[] = $monthDateTime->format('M'); // Convert month number to month name
-                $counts[] = $item->count;
-                $backgroundColors[] = $colors[$index % count($colors)]; // Assign color based on index
-            }
-        }
-
-        // Pass data to the view using compact
-        return view('analytics', compact('months', 'counts', 'backgroundColors'));
-    }
-    public function updateContest(){
-        // Fetch all traffic violations
-        
-        // Fetch recent TasFiles ordered by case number descending
-        $recentViolationsToday = TasFile::all()->sortByDesc('case_no');
-        
-        // Fetch all codes (assuming TrafficViolation model provides codes)
-        $violation = TrafficViolation::all();
-        
-        // Prepare a collection for officers
-        $officers = collect();
-       
-        
-        foreach ($recentViolationsToday as $tasFile) {
-            $officerName = $tasFile->apprehending_officer;
-            $officersForFile = ApprehendingOfficer::where('officer', $officerName)->get();
-            $officers = $officers->merge($officersForFile);
-            $tasFile->relatedofficer = $officersForFile;
+    public function updateContest()
+    {
+        try {
+            // Fetch all traffic violations
+            $violation = TrafficViolation::all();
             
+            // Fetch recent TasFiles ordered by case number descending
+            $recentViolationsToday = TasFile::all()->sortByDesc('case_no');
+            
+            // Prepare a collection for officers
+            $officers = collect();
+            
+            foreach ($recentViolationsToday as $tasFile) {
+                // Update completeness symbols for each TasFile
+                $tasFile->checkCompleteness();
+                
+                // Handle deletion case for each TasFile
+                $tasFile->handleDeletion();
+    
+                $officerName = $tasFile->apprehending_officer;
+                $officersForFile = ApprehendingOfficer::where('officer', $officerName)->get();
+                $officers = $officers->merge($officersForFile);
+                $tasFile->relatedofficer = $officersForFile;
+            }
+    
+            // Debugging: Dump the officers collection to check the data
+            // dd($officers);
+            // dd($recentViolationsToday[100]);
+    
+            // Pass data to the view, including the new variable $violation
+            return view('tas.edit', compact('recentViolationsToday', 'violation', 'officers'));
+        } catch (\Exception $e) {
+            \Log::error('Error updating contest: ' . $e->getMessage());
+            throw new \Exception('Error updating contest: ' . $e->getMessage());
         }
-
-        // Debugging: Dump the officers collection to check the data
-        // dd($officers);
-        // dd($recentViolationsToday[100]);
-        // Pass data to the view, including the new variable $violationData
-        return view('tas.edit', compact('recentViolationsToday', 'violation', 'officers'));
     }
+    
     public function updateAdmitted(){
         // Fetch all traffic violations
         
@@ -1842,20 +1859,37 @@ public function editdepp(){
         return response()->json(['message' => 'Violation updated successfully', 'violations' => json_decode($tasFile->violation)]);
     }
     public function DELETEVIO(Request $request, $id) {
-        $tasFile = TasFile::findOrFail($id);
-        $violationIndex = $request->input('index');
-
-        // Retrieve existing violations
-        $violations = json_decode($tasFile->violation, true) ?? [];
-
-        if (isset($violations[$violationIndex])) {
-            array_splice($violations, $violationIndex, 1);
-            $tasFile->violation = json_encode($violations);
-            $tasFile->save();
+        try {
+            $tasFile = TasFile::findOrFail($id);
+            $violationIndex = $request->input('index');
+    
+            // Retrieve existing violations
+            $violations = json_decode($tasFile->violation, true) ?? [];
+    
+            if (isset($violations[$violationIndex])) {
+                array_splice($violations, $violationIndex, 1);
+                $tasFile->violation = json_encode($violations);
+                $tasFile->save();
+                
+                // Log the deletion of the violation
+                \Log::info("Violation at index $violationIndex deleted successfully for TasFile ID: $id.");
+    
+              
+    
+                // Log the update of the completeness status
+                \Log::info("TasFile ID: $id completeness checked and symbols updated.");
+            } else {
+                \Log::warning("Violation index $violationIndex not found for TasFile ID: $id.");
+                return response()->json(['message' => 'Violation index not found'], 404);
+            }
+    
+            return response()->json(['message' => 'Violation deleted successfully', 'violations' => json_decode($tasFile->violation)]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting violation: ' . $e->getMessage());
+            return response()->json(['message' => 'Error deleting violation', 'error' => $e->getMessage()], 500);
         }
-
-        return response()->json(['message' => 'Violation deleted successfully', 'violations' => json_decode($tasFile->violation)]);
     }
+    
     public function deleteRemark(Request $request)
     {
         // Retrieve data from AJAX request
@@ -2136,17 +2170,423 @@ public function editdepp(){
         return redirect()->back()->with('success', 'Case finished successfully.');
     }
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                                                       ////////////////////////////////////////////////ANALYTICS//////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
+    public function analyticsDash()
+    {
+        // Fetch data from the TasFile model
+        $tasFiles = TasFile::all();
 
+        // Count the number of complete and incomplete entries
+        $completeCount = $tasFiles->where('symbols', 'complete')->count();
+        $incompleteCount = $tasFiles->where('symbols', 'incomplete')->count();
 
+        // Prepare data for the chart
+        $chartData = [
+            ['label' => 'Complete', 'value' => $completeCount],
+            ['label' => 'Incomplete', 'value' => $incompleteCount],
+        ];
 
+        // Fetch data for the violation chart
+        $violationsData = TasFile::select(DB::raw('violation, count(*) as count'))
+            ->groupBy('violation')
+            ->get();
 
+        // Prepare data for ApexCharts
+        $labels = $violationsData->pluck('violation')->toArray();
+        $data = $violationsData->pluck('count')->toArray();
 
     
-    //====================================================================================================================================================================
-    //====================================================================================================================================================================
-    //====================================================================================================================================================================
-    //====================================================================================================================================================================
-    //====================================================================================================================================================================
-    //====================================================================================================================================================================
+
+        $yearsWithData = TasFile::distinct()
+        ->selectRaw('YEAR(date_received) as year')
+        ->pluck('year');
+
+
+        // Pass data to the view
+        return view('analytics', compact('chartData','yearsWithData', 'labels', 'data'  ));
+    }
+
+    public function show($year, $month)
+    {
+        $forecastData = Forecast::where('year', $year)
+            ->where('month', $month)
+            ->first();
+
+        return response()->json($forecastData);
+    }
+
+    public function fetchMonthlyTypeOfVehicle(Request $request)
+    {
+        $selectedMonth = $request->input('month');
+        $comparisonMonth = $request->input('comparison_month');
+
+        // Query to get the count of each type of vehicle for the selected month
+        $selectedMonthData = TasFile::select(DB::raw("DATE_FORMAT(date_received, '%Y-%m') as month"), 'typeofvehicle', DB::raw('COUNT(*) as total'))
+            ->whereRaw("DATE_FORMAT(date_received, '%Y-%m') = ?", [$selectedMonth])
+            ->groupBy('month', 'typeofvehicle')
+            ->get();
+
+        // Query to get the count of each type of vehicle for the comparison month
+        $comparisonMonthData = TasFile::select(DB::raw("DATE_FORMAT(date_received, '%Y-%m') as month"), 'typeofvehicle', DB::raw('COUNT(*) as total'))
+            ->whereRaw("DATE_FORMAT(date_received, '%Y-%m') = ?", [$comparisonMonth])
+            ->groupBy('month', 'typeofvehicle')
+            ->get();
+
+        // Prepare data for charting
+        $chartData = [];
+        foreach ($selectedMonthData as $row) {
+            $chartData[$row->typeofvehicle]['selected_month'] = $row->total;
+        }
+
+        foreach ($comparisonMonthData as $row) {
+            $chartData[$row->typeofvehicle]['comparison_month'] = $row->total;
+        }
+
+        // Prepare labels and datasets for chart
+        $labels = [];
+        $selectedMonthValues = [];
+        $comparisonMonthValues = [];
+        foreach ($chartData as $vehicle => $counts) {
+            $labels[] = $vehicle;
+
+            $selectedMonthValues[] = $counts['selected_month'] ?? 0;
+            $comparisonMonthValues[] = $counts['comparison_month'] ?? 0;
+        }
+
+        // Prepare data to be returned as JSON
+        $jsonData = [
+            'labels' => $labels,
+            'datasets' => [
+                [
+                    'label' => 'Selected Month',
+                    'data' => $selectedMonthValues,
+                    'backgroundColor' => 'rgba(255, 99, 132, 0.2)',
+                    'borderColor' => 'rgba(255, 99, 132, 1)',
+                    'borderWidth' => 1
+                ],
+                [
+                    'label' => 'Comparison Month',
+                    'data' => $comparisonMonthValues,
+                    'backgroundColor' => 'rgba(54, 162, 235, 0.2)',
+                    'borderColor' => 'rgba(54, 162, 235, 1)',
+                    'borderWidth' => 1
+                ]
+            ]
+        ];
+
+        return response()->json($jsonData);
+    }
+    public function getDateReceivedData(Request $request)
+    {
+        try {
+            // Validate the request data to ensure 'month' parameter is present
+            $request->validate([
+                'month' => 'required|date_format:Y-m',
+            ]);
+    
+            // Extract the year and month from the 'month' input
+            $monthInput = $request->input('month');
+            $year = intval(substr($monthInput, 0, 4));
+            $month = intval(substr($monthInput, 5, 2));
+    
+            // Fetch all records for the specified month and year
+            $data = TasFile::whereMonth('date_received', $month)
+                           ->whereYear('date_received', $year)
+                           ->get();
+    
+            // Count occurrences by date_received
+            $dateCounts = $data->groupBy(function ($item) {
+                return $item->date_received instanceof \Carbon\Carbon
+                    ? $item->date_received->format('Y-m-d')
+                    : \Carbon\Carbon::parse($item->date_received)->format('Y-m-d');
+            })->map(function ($group) {
+                return $group->count();
+            });
+    
+            $formattedData = $dateCounts->map(function ($count, $date) {
+                return [
+                    'date' => $date,
+                    'count' => $count,
+                ];
+            })->values();
+    
+            return response()->json($formattedData);
+        } catch (\Exception $e) {
+            // Log the exception for debugging
+            \Log::error('Error fetching date received data: ' . $e->getMessage());
+    
+            return response()->json(['error' => 'An error occurred while fetching data'], 500);
+        }
+    }
+    
+    
+    public function fetchViolations(Request $request)
+    {
+        $month1 = $request->query('month_1');
+        $year1 = $request->query('year_1');
+        $month2 = $request->query('month_2');
+        $year2 = $request->query('year_2');
+
+        // Validate inputs
+        if (!$month1 || !$year1 || !$month2 || !$year2) {
+            return response()->json(['error' => 'Invalid months or years selected'], 400);
+        }
+
+        // Fetch violations for the selected months and years
+        $violationsMonth1 = TasFile::whereMonth('date_received', $month1)
+            ->whereYear('date_received', $year1)
+            ->count();
+        $violationsMonth2 = TasFile::whereMonth('date_received', $month2)
+            ->whereYear('date_received', $year2)
+            ->count();
+
+        // Prepare data for ApexCharts
+        $data = [
+            'series' => [$violationsMonth1, $violationsMonth2],
+            'labels' => [
+                date('F Y', mktime(0, 0, 0, $month1, 10, $year1)),
+                date('F Y', mktime(0, 0, 0, $month2, 10, $year2))
+            ],
+        ];
+
+        // Return data as JSON
+        return response()->json($data);
+    }
+
+ 
+    public function getViolationRankings(Request $request)
+    {
+        // Validate page number from request or default to 1
+        $page = $request->query('page', 1);
+
+        // Fetch all TasFile records (you may need to adjust based on your actual needs)
+        $tasFiles = TasFile::all();
+
+        // Array to hold the count of each violation
+        $violationsCount = [];
+
+        foreach ($tasFiles as $tasFile) {
+            // Extract violation codes
+            preg_match_all('/\"(.*?)\"|([A-Za-z0-9\s]+(?:\s+AND\s+[A-Za-z0-9\s]+)*)/', $tasFile->violation, $matches);
+            $elements = array_merge($matches[1], $matches[2]);
+
+            foreach ($elements as $element) {
+                $subElements = explode(',', $element);
+                foreach ($subElements as $subElement) {
+                    $subElement = trim($subElement);
+                    if (!empty($subElement)) {
+                        if (!isset($violationsCount[$subElement])) {
+                            $violationsCount[$subElement] = 0;
+                        }
+                        $violationsCount[$subElement]++;
+                    }
+                }
+            }
+        }
+
+        // Sort violations by count in descending order
+        arsort($violationsCount);
+
+        // Prepare paginated response
+        $perPage = 10; // Adjust as per your requirement
+        $total = count($violationsCount);
+        $lastPage = ceil($total / $perPage);
+        $offset = ($page - 1) * $perPage;
+        $paginatedViolations = array_slice($violationsCount, $offset, $perPage, true);
+
+        // Fetch violation names from TrafficViolation model
+        $response = [];
+        foreach ($paginatedViolations as $violationCode => $count) {
+            $violation = TrafficViolation::where('code', $violationCode)->first();
+            if ($violation) {
+                $response[] = [
+                    'violation' => $violation->violation,
+                    'count' => $count
+                ];
+            }
+        }
+
+        // Prepare pagination metadata
+        $paginationData = [
+            'current_page' => $page,
+            'last_page' => $lastPage,
+            'per_page' => $perPage,
+            'total' => $total,
+        ];
+
+        return response()->json([
+            'data' => $response,
+            'pagination' => $paginationData,
+        ]);
+    }
+
+
+    public function getPieChartData(Request $request)
+    {
+        try {
+            $month = $request->query('month');
+            $query = TasFile::query();
+
+            if ($month) {
+                $query->whereMonth('date_received', '=', Carbon::parse($month)->month)
+                    ->whereYear('date_received', '=', Carbon::parse($month)->year);
+            }
+
+            // Retrieve all records from the TasFile model
+            $tasFiles = $query->get();
+            Log::info('TasFile Records Retrieved: ', $tasFiles->toArray());
+
+            // Prepare a count array for violations
+            $violationCounts = [];
+
+            // Iterate through each record and count violations
+            foreach ($tasFiles as $file) {
+                $violations = explode(',', $file->violation);
+                Log::info('Violations for TasFile: ', $violations);
+
+                foreach ($violations as $violationCode) {
+                    $violationCode = trim($violationCode, '[]" '); // Trim any whitespace and unwanted characters
+                    if (!empty($violationCode)) {
+                        if (isset($violationCounts[$violationCode])) {
+                            $violationCounts[$violationCode]++;
+                        } else {
+                            $violationCounts[$violationCode] = 1;
+                        }
+                    }
+                }
+            }
+
+            Log::info('Violation Counts: ', $violationCounts);
+
+            // Fetch the violation details from TrafficViolation model
+            $violationDetails = TrafficViolation::whereIn('code', array_keys($violationCounts))->get();
+            Log::info('Violation Details: ', $violationDetails->toArray());
+
+            // Prepare final data structure
+            $pieChartData = [];
+            foreach ($violationDetails as $violationDetail) {
+                $code = $violationDetail->code;
+                if (isset($violationCounts[$code])) {
+                    $pieChartData[] = [
+                        'code' => $code,
+                        'violation' => $violationDetail->violation,
+                        'count' => $violationCounts[$code],
+                    ];
+                } else {
+                    Log::warning('Violation code not found in counts: ' . $code);
+                }
+            }
+
+            // Return the data as JSON response
+            return response()->json($pieChartData);
+
+        } catch (\Exception $e) {
+            // Log the error
+            Log::error('Error generating pie chart data: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to generate pie chart data'], 500);
+        }
+    }
+
+////////////////////////////////////////////////////////////////////////COMMUNICATION//////////////////////////////////////////////////////////////////////
+//                                                                                                                                                       // 
+  //                                                                                                                                                   //  
+//                                                                                                                                                       //
+////////////////////////////////////////////////////////////////////////COMMUNICATION//////////////////////////////////////////////////////////////////////
+
+    public function chatIndex($userId = null)
+    {
+        $messages = G5ChatMessage::latest()->with('user')->limit(10)->get();
+        $user = Auth::user();
+        $name = $user->name;
+        $department = $user->department;
+        $unreadMessageCount = G5ChatMessage::where('is_read', false)->count();
+        $userId = $userId ?? Auth::id(); // Get the current user's ID if $userId is not provided
+
+
+        
+        // Fetch the list of users for the sidebar
+        $users = User::where('id', '!=', $userId)->get();
+
+        return view('chat', compact('unreadMessageCount', 'messages', 'name', 'department', 'userId', 'users'));
+    }
+    public function storeMessage(Request $request)
+    {
+        $request->validate([
+            'message' => 'required|string',
+            'receiver_id' => 'required|integer|exists:users,id',
+        ]);
+
+        try {
+            $message = new G5ChatMessage();
+            $message->message = $request->input('message');
+            $message->user_id = Auth::id();
+            $message->receiver_id = $request->input('receiver_id');
+            $message->save();
+
+            // Return the newly created message along with success message and user details
+            return response()->json([
+                'message' => 'Message sent successfully.',
+                'newMessage' => $message,
+                'user' => Auth::user(),
+            ], 200);
+        } catch (\Exception $e) {
+            // Log the error
+            Log::error('Error storing chat message: ' . $e->getMessage());
+
+            // Return an error response
+            return response()->json(['error' => 'Failed to send message.'], 500);
+        }
+    }
+    public function getChatData($userId)
+    {
+        try {
+            // Set a timeout for long polling (adjust as needed)
+            $timeout = 30; // Timeout in seconds
+    
+            $startTime = time();
+            while (true) {
+                // Check if the time limit for long polling has been reached
+                if (time() - $startTime >= $timeout) {
+                    // If the timeout is reached, return an empty response to indicate no new messages
+                    return response()->json(['messages' => []]);
+                }
+    
+                // Fetch messages between the current user and the selected user, ordered by created_at in descending order
+                $messages = G5ChatMessage::where(function($query) use ($userId) {
+                    $query->where('user_id', Auth::id())->where('receiver_id', $userId);
+                })->orWhere(function($query) use ($userId) {
+                    $query->where('user_id', $userId)->where('receiver_id', Auth::id());
+                })->orderBy('created_at', 'desc')->with('user', 'receiver')->limit(10)->get();
+                
+                // Transform messages and format date
+                $messages->transform(function ($message) {
+                    $message->created_at_formatted = Carbon::parse($message->created_at)->format('M d, Y H:i A');
+                    return $message;
+                });
+    
+                // Get current user details
+                $user = Auth::user();
+    
+                if ($messages->isNotEmpty()) {
+                    // If messages are available, return them along with the current user details
+                    return response()->json(['messages' => $messages, 'user' => $user]);
+                }
+    
+                // Sleep for a short interval before checking again
+                usleep(500000); // Sleep for 0.5 seconds (adjust as needed)
+            }
+        } catch (\Exception $e) {
+            // Log the error
+            Log::error('Error fetching chat messages: ' . $e->getMessage());
+            
+            // Return an error response
+            return response()->json(['error' => 'Failed to fetch chat messages.'], 500);
+        }
+    }
+    
 }

@@ -55,17 +55,16 @@
                     <tbody>
                         @foreach ($tasFiles as $tasFile)
                         <tr class="table-row" data-bs-toggle="modal" data-bs-target="#exampleModal{{ $tasFile->id }}">
-                            <td class="symbol-cell {{ symbolBgColor($tasFile->symbols) }}" onclick="openModal('{{ $tasFile->symbols }}')">
-                                @if($tasFile->symbols === 'complete')
-                                    <span class="text-white"><i class="bi bi-check-circle-fill"></i> Complete</span>
-                                @elseif($tasFile->symbols === 'incomplete')
-                                    <span class="text-white"><i class="bi bi-exclamation-circle-fill"></i> Incomplete</span>
-                                @elseif($tasFile->symbols === 'deleting')
-                                    <span class="text-white"><i class="bi bi-trash-fill"></i> Deleting</span>
-                                @else
-                                    <span class="text-white"><i class="bi bi-question-circle-fill"></i> Incomplete</span>
-                                @endif
-                            </td>
+                        <td class="symbol-cell {{ symbolBgColor($tasFile->symbols) }}" onclick="openModal('{{ $tasFile->symbols }}')">
+    @if($tasFile->symbols === 'complete')
+        <span class="text-white"><i class="bi bi-check-circle-fill"></i> Complete</span>
+    @elseif($tasFile->symbols === 'incomplete')
+        <span class="text-white"><i class="bi bi-exclamation-circle-fill"></i> Incomplete</span>
+    @else
+        <span class="text-white"><i class="bi bi-question-circle-fill"></i> Incomplete</span>
+    @endif
+</td>
+
                             <td>{{ $tasFile->case_no  ?? 'N/A' }}</td>
                             <td>{{ $tasFile->transaction_no ?? 'N/A' }}</td>
                             <td>{{ $tasFile->top ?? 'N/A' }}</td>
@@ -137,7 +136,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            <button type="submit" class="btn btn-primary">Finish</button>
+            <button type="submit" class="btn btn-primary">Submit</button>
           </div>
         </form>
       </div>
@@ -171,7 +170,7 @@
                     saveRemarksBtn.prop('disabled', false);
 
                     // Show success message
-                    showAlert(response.message);
+                    toastr.success(response.message);
 
                     // Reload the modal body content
                     var fetchUrl = fetchViolationUrl.replace('ID_PLACEHOLDER', modalId);

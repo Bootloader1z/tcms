@@ -173,6 +173,41 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/contested/edit/tasfile/view/details/delete-remark/',  [DashboardController::class, 'deleteRemark'])->name('edit.deleteremarks');
     Route::delete('/contested/edit/tasfile-{id}/view/details/deleteCase', [DashboardController::class, 'deleteTas'])->name('violations.delete');
     //     tasFile =============================
+
+    
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////ANALYTICS
+/////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////
+//////////////////////////////////////
+Route::get('/monthly-type-of-vehicle', [DashboardController::class, 'fetchMonthlyTypeOfVehicle'])->name('sakotse');
+Route::get('/api/pie-chart-data', [DashboardController::class, 'getPieChartData'])->name('piechartngContested');
+
+
+
+Route::get('/api/date-received-data', [DashboardController::class, 'getDateReceivedData'])->name('bilangngmgakaso');
+ 
+Route::get('/fetch-violations', [DashboardController::class, 'fetchViolations'])->name('damingmgakaso');
+
+
+Route::get('/api/violation-rankings', [DashboardController::class, 'getViolationRankings'])->name('violation.rankings');
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////// COMMUNICATION  /////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Route::post('/chatstore/storeChat', [DashboardController::class, 'storeMessage'])->name('chat.store');
+Route::get('/get-chat-data/{userId}', [DashboardController::class, 'getChatData'])->name('chat.messages');
+Route::get('/chat/{userId?}', [DashboardController::class, 'chatIndex'])->name('chat.index');
+
+
+Route::get('/user/{user}/messages', [UserController::class, 'getUserMessages']);
+ 
+Route::get('/start-chat/{userId}', [UserController::class, 'startChat'])->name('chat.start');
+Route::get('/check-new-messages/{userId}',  [DashboardController::class, 'checkNewMessages'])->name('check.chat');
+
 });
 
 

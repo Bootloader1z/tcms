@@ -379,7 +379,7 @@ h6 {
 .header {
   transition: all 0.5s;
   z-index: 997;
-  height: 70px;
+  height: 60px;
   box-shadow: 0px 2px 20px rgba(1, 41, 112, 0.1);
   background-color: #fff;
   padding-left: 20px;
@@ -1775,9 +1775,217 @@ ul.list-unstyled li {
 
 .toast.toast-warning {
     background-color: #ffc107;
-}  th {
-  background-color: blue;
+}
+#violationCountChart {
+  height: 400px; /* Ensure the chart container has a defined height */
+}
+.btn-hover:hover {
+  transform: scale(1.05);
+  transition: transform 0.3s;
+}
+
+/* public/css/styles.css */
+    /* Initial animation for sidebar */
+    .sidebarUsers {
+      opacity: 0;
+      transform: translateX(-20px);
+      transition: all 0.5s ease-in-out;
+  }
+
+  .sidebarUsers.show {
+      opacity: 1;
+      transform: translateX(0);
+  }
+
+  /* Hover animation for user list items */
+  .user {
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+  }
+
+  .user:hover {
+      background-color: #f0f0f0;
+      transform: scale(1.05);
+  }
+
+  .user img.avatar {
+      margin-right: 10px;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      transition: transform 0.3s ease;
+  }
+
+  .user:hover img.avatar {
+      transform: scale(1.1);
+  }
+
+  .username {
+      flex-grow: 1;
+  }
+
+  .status {
+      margin-left: 10px;
+  }
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.username {
+  font-weight: bold;
+}
+
+.status {
+  font-size: 12px;
+  color: #888;
+}
+
+.status.online {
+  color: #4caf50; /* green */
+}
+
+.status.offline {
+  color: #f44336; /* red */
+}
+.hidden {
+  display: none;
+}
+.chat-box {
+  display: none;
+}
+.float-chatbox {
+  position: fixed;
+  bottom: 0;
+  right: 20px;
+  width: 300px;
+  max-height: 400px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-header {
+  background-color: #007bff;
   color: white;
   padding: 10px;
-  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: move;
+}
+
+.chat-body {
+  overflow-y: auto;
+  flex-grow: 1;
+  padding: 10px;
+}
+
+.chat-footer {
+  padding: 10px;
+}
+
+.hidden {
+  display: none;
+}
+.last-active-bubble {
+  display: none;
+  position: absolute;
+  background-color: #333;
+  color: #fff;
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+  z-index: 1;
+}
+
+.user {
+  position: relative;
+}
+
+.user:hover .last-active-bubble {
+  display: block;
+}
+.avatar-icon {
+  font-size: 2em; /* Adjust size as needed */
+  display: inline-block;
+  vertical-align: middle;
+}
+.avatar {
+  width: 50px; /* Adjust size as needed */
+  height: 50px; /* Adjust size as needed */
+  border-radius: 50%;
+}
+.avatar {
+  width: 40px;
+  height: 40px;
+}
+.avatar-icon {
+  font-size: 40px;
+}
+.user {
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+.user:hover {
+  background-color: #f0f0f0;
+}
+.online {
+  color: green;
+}
+.offline {
+  color: gray;
+}
+.message {
+  display: flex;
+  flex-direction: column;
+  max-width: 70%;
+  margin-bottom: 10px;
+}
+.message.outgoing {
+  align-self: flex-end;
+  background-color: #d1e7dd;
+  border-radius: 15px 15px 0 15px;
+}
+.message.incoming {
+  align-self: flex-start;
+  background-color: #f8d7da;
+  border-radius: 15px 15px 15px 0;
+}
+.message-details {
+  font-size: 0.8rem;
+  margin-bottom: 2px;
+}
+.message-content {
+  padding: 10px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.chat-container {
+  height: 500px;
+  border: 1px solid #dee2e6;
+  border-top: none;
+}
+.chat-input {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.card-header, .card-footer {
+  padding: 0.75rem 1.25rem;
+}
+.left-bg {
+  background-image: url('/assets/img/image.jpg');
+  background-size: cover;
+  background-position: center;
+  min-height: 100vh; /* Adjust as needed */
+  padding: 20px; /* Adjust padding to ensure content is visible */
+  color: white; /* Text color on top of background */
 }
