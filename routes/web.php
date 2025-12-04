@@ -38,8 +38,24 @@ Route::get('/', function () {
 })->name('landpage');
 
 Route::get('/loginpage', [AuthController::class, 'loadlogin'])->name('login');
-Route::post('/loginpost', [AuthController::class, 'login'])->name('login.submit'); 
-Route::get('/logout', [AuthController::class, 'logoutx'])->name('logout');
+Route::post('/loginpost', [AuthController::class, 'login'])
+    ->middleware('throttle.login')
+    ->name('login.submit'); 
+Route::get('/logout', [AuthController::class, 'logoutx'])
+    ->middleware('auth')
+    ->name('logout');
+
+// Password Reset Routes
+Route::get('/forgot-password', [App\Http\Controllers\PasswordResetController::class, 'showLinkRequestForm'])
+    ->name('password.request');
+Route::post('/forgot-password', [App\Http\Controllers\PasswordResetController::class, 'sendResetLinkEmail'])
+    ->middleware('throttle:3,1')
+    ->name('password.email');
+Route::get('/reset-password/{token}', [App\Http\Controllers\PasswordResetController::class, 'showResetForm'])
+    ->name('password.reset');
+Route::post('/reset-password', [App\Http\Controllers\PasswordResetController::class, 'reset'])
+    ->middleware('throttle:3,1')
+    ->name('password.update');
 
 // Middleware routes for authenticated users
 Route::middleware(['auth'])->group(function () {
@@ -80,6 +96,11 @@ Route::middleware(['auth'])->group(function () {
   Route::delete('/manage-user/users/{user}', [DashboardController::class, 'userdestroy'])->name('users.destroy');
   Route::get('/manage-user/add-user', [DashboardController::class, 'add_user'])->name('add.user');
   Route::post('/manage-user/store-user', [DashboardController::class, 'store_user'])->name('store.user');
+  
+  // Admin password reset for users
+  Route::post('/manage-user/users/{id}/reset-password', [App\Http\Controllers\PasswordResetController::class, 'adminResetPassword'])
+    ->middleware('isAdmin')
+    ->name('users.reset-password');
 
  //                     USER-MANAGEMENT============
 

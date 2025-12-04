@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call(UsersTableSeeder::class);
         $this->call(EmployeeSeeder::class);
-        
+        // $this->call(UsersTableSeeder::class);
         // Use the TasFileFactory to generate fake data
         // TasFile::factory()->count(1000)->create();
     }

@@ -1099,10 +1099,8 @@ public function tasView()
         }
     }
     public function management(){
-        $users = User::all()->map(function($user) {
-            $user->decrypted_password = Crypt::decryptString($user->password);
-            return $user;
-        });
+        // No longer decrypt passwords - they are hashed and cannot be decrypted
+        $users = User::all();
 
         return view('user_management', ['users' => $users]);
     }
@@ -1116,17 +1114,24 @@ public function tasView()
     }
     public function store_user(Request $request){
         try {
-            // Validate the incoming request data
+            // Validate the incoming request data with strong password requirements
             $request->validate([
                 'fullname' => 'required|string|max:255',
-                'username' => 'required|string|max:255|unique:users',
+                'username' => 'required|string|max:255|unique:users|alpha_dash',
                 'email' => 'required|string|email|max:255|unique:users',
-                'password' => 'required|string|min:8',
+                'password' => [
+                    'required',
+                    'string',
+                    'min:8',
+                    'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/',
+                ],
+                'role' => 'required|integer|in:0,1,2,9',
+            ], [
+                'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
             ]);
 
             // Begin a database transaction
             DB::beginTransaction();
-
 
             $user = new User([
                 'fullname' => $request->input('fullname'),
@@ -1134,20 +1139,28 @@ public function tasView()
                 'email' => $request->input('email'),
                 'role' => $request->input('role'),
                 'email_verified_at' => now(),
-                'password' => bcrypt($request->input('password')),
+                'password' => Hash::make($request->input('password')), // Use Hash::make instead of bcrypt
             ]);
-
 
             $user->save();
 
+            // Log user creation
+            \Log::info('New user created', [
+                'admin_id' => auth()->id(),
+                'new_user_id' => $user->id,
+                'username' => $user->username,
+            ]);
 
             DB::commit();
 
-
             return redirect()->route('user_management')->with('success', 'User created successfully');
-        } catch (\Exception $e) {
-
+        } catch (\Illuminate\Validation\ValidationException $e) {
             DB::rollBack();
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('User creation failed', ['error' => $e->getMessage()]);
+            return redirect()->back()->with('error', 'Failed to create user: ' . $e->getMessage());
 
 
             Log::error('Error creating user: ' . $e->getMessage());

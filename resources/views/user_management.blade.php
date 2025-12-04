@@ -40,9 +40,8 @@
                         <th>Name</th>
                         <th>Username</th>
                         <th>Email</th>
-                        <th>Password</th>
                         <th>Status</th>
-                        <th>Acitve</th>
+                        <th>Active</th>
                         <th>Action</th>
                     </tr> 
                 </thead>
@@ -53,9 +52,6 @@
                         <td>{{ $user->fullname }}</td>
                         <td>{{ $user->username }}</td>
                         <td>{{ $user->email }}</td>
-                        <td>
-                        <span class="password" data-password="{{ $user->decrypted_password }}"></span> 
-                        </td>
                         <td>
                             @if ($user->role == 9)
                             <span class="text-primary">Administrator</span>
@@ -74,12 +70,14 @@
                         </td>
                         <td>
                             <a href="{{ route('users.edit', $user->id) }}" class="btn btn-sm btn-primary">Edit Profile</a>
-                            <a href="{{ route('users.profile', $user->id) }}" class="btn btn-sm btn-primary mt-2">Show Profile</a>
-                            <button class="toggle-password btn btn-sm btn-primary mt-2" data-visible="false">Show Password</button>
+                            <a href="{{ route('users.profile', $user->id) }}" class="btn btn-sm btn-info mt-2">Show Profile</a>
+                            <button type="button" class="btn btn-sm btn-warning mt-2" data-bs-toggle="modal" data-bs-target="#resetPasswordModal{{ $user->id }}">
+                                <i class="bi bi-key"></i> Reset Password
+                            </button>
                             <form action="{{ route('users.destroy', $user) }}" method="POST" style="display: inline;">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-danger mt-2"  onclick="return confirm('Are you sure?')">Delete</button>
+                                <button type="submit" class="btn btn-sm btn-danger mt-2" onclick="return confirm('Are you sure you want to delete this user?')">Delete</button>
                             </form>
                         </td>
                     </tr>
@@ -88,6 +86,57 @@
             </table>
         </div>
     </div>
+
+    <!-- Reset Password Modals -->
+    @foreach ($users as $user)
+    <div class="modal fade" id="resetPasswordModal{{ $user->id }}" tabindex="-1" aria-labelledby="resetPasswordModalLabel{{ $user->id }}" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" id="resetPasswordModalLabel{{ $user->id }}">
+                        <i class="bi bi-key"></i> Reset Password for {{ $user->fullname }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ route('users.reset-password', $user->id) }}" method="POST">
+                        @csrf
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> You are resetting the password for <strong>{{ $user->username }}</strong>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password{{ $user->id }}" class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="password{{ $user->id }}" name="password" required minlength="8">
+                            <div class="form-text">
+                                Password must contain:
+                                <ul class="small">
+                                    <li>At least 8 characters</li>
+                                    <li>One uppercase letter (A-Z)</li>
+                                    <li>One lowercase letter (a-z)</li>
+                                    <li>One number (0-9)</li>
+                                    <li>One special character (@$!%*?&)</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password_confirmation{{ $user->id }}" class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="password_confirmation{{ $user->id }}" name="password_confirmation" required minlength="8">
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-key"></i> Reset Password
+                            </button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endforeach
     <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -121,9 +170,12 @@
                         </div>
                         <div class="mb-3">
                             <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" name="password" required>
+                            <input type="password" class="form-control" id="password" name="password" required minlength="8">
                             <div class="invalid-tooltip">
                                 Please enter a valid password (at least 8 characters).
+                            </div>
+                            <div class="form-text">
+                                Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&).
                             </div>
                         </div>
                         <div class="mb-3">
@@ -204,28 +256,29 @@
         });
     });
 </script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+// Password validation for add user form
 $(document).ready(function() {
-    $(".password").each(function() {
-        var passwordSpan = $(this);
-        var password = passwordSpan.data("password");
-        var asterisks = "*".repeat(password.length);
-        passwordSpan.text(asterisks);
-    });
-    $(".toggle-password").click(function() {
-        var passwordSpan = $(this).closest("tr").find(".password");
-        var visible = $(this).data("visible");
-        if (visible === "true") {
-            var asterisks = "*".repeat(passwordSpan.data("password").length);
-            passwordSpan.text(asterisks);
-            $(this).text("Show Password");
-            $(this).data("visible", "false");
-        } else {
-            var password = passwordSpan.data("password");
-            passwordSpan.text(password);
-            $(this).text("Hide Password");
-            $(this).data("visible", "true");
+    // Password strength indicator
+    $('#password').on('input', function() {
+        var password = $(this).val();
+        var strength = 0;
+        
+        if (password.length >= 8) strength++;
+        if (/[a-z]/.test(password)) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[@$!%*?&]/.test(password)) strength++;
+        
+        var strengthText = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+        var strengthColor = ['danger', 'warning', 'info', 'primary', 'success'];
+        
+        if (password.length > 0) {
+            $(this).next('.invalid-tooltip').html(
+                '<span class="badge bg-' + strengthColor[strength - 1] + '">' + 
+                strengthText[strength - 1] + 
+                '</span>'
+            );
         }
     });
 });

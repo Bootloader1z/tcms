@@ -51,6 +51,35 @@
         ],
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi"
+        ],
+        "test": [
+            "@php artisan test"
+        ],
+        "test-coverage": [
+            "@php artisan test --coverage"
+        ],
+        "optimize": [
+            "@php artisan config:cache",
+            "@php artisan route:cache",
+            "@php artisan view:cache",
+            "@php artisan optimize"
+        ],
+        "clear-all": [
+            "@php artisan cache:clear",
+            "@php artisan config:clear",
+            "@php artisan route:clear",
+            "@php artisan view:clear",
+            "@php artisan clear-compiled"
+        ],
+        "fresh": [
+            "@php artisan migrate:fresh --seed"
+        ],
+        "prod-deploy": [
+            "@composer install --no-dev --optimize-autoloader",
+            "@php artisan migrate --force",
+            "@php artisan config:cache",
+            "@php artisan route:cache",
+            "@php artisan view:cache"
         ]
     },
     "extra": {

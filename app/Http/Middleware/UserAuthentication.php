@@ -16,10 +16,29 @@ class UserAuthentication
      */
     public function handle(Request $request, Closure $next)
     {
-        if(auth()->user() && auth()->user()->role == 0){
+        if (!auth()->check()) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+            return redirect()->route('login')->with('error', 'Please login to access this page.');
+        }
+
+        $user = auth()->user();
+        
+        if ($user->role === 0) {
             return $next($request);
         }
 
-        return redirect('/');
+        \Log::warning('Unauthorized user access attempt', [
+            'user_id' => $user->id,
+            'ip' => $request->ip(),
+            'url' => $request->fullUrl()
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Forbidden. User access required.'], 403);
+        }
+
+        abort(403, 'Unauthorized action.');
     }
 }

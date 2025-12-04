@@ -4,8 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 
 class UsersTableSeeder extends Seeder
 {
@@ -16,121 +16,78 @@ class UsersTableSeeder extends Seeder
      */
     public function run()
     {
-        // Seed multiple sample users
+        // Disable foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        
+        // Clear existing users
+        DB::table('users')->truncate();
+        
+        // Re-enable foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+        // Seed users with proper bcrypt hashing
         $users = [
             [
-                'id' => 1,
                 'fullname' => 'Super Admin',
                 'username' => 'admin',
                 'email' => 'administrator@tas.com',
-                'password' => Crypt::encryptString('P@s$w0rd123'),
-                'email_verified_at' => '2024-04-25 13:15:39',
-                'role' => 9,
+                'password' => Hash::make('Admin@123'),
+                'email_verified_at' => now(),
+                'role' => 9, // Super Admin
                 'isactive' => 0,
-                'created_at' => '2024-04-25 13:15:39',
-                'updated_at' => '2024-05-31 16:27:02',
             ],
             [
-                'id' => 2,
-                'fullname' => 'OJT SAINT',
-                'username' => 'saint',
-                'email' => 'saint@tas.com',
-                'password' => Crypt::encryptString('password123'),
-                'email_verified_at' => '2024-04-25 13:15:39',
-                'role' => 2,
+                'fullname' => 'System Administrator',
+                'username' => 'sysadmin',
+                'email' => 'sysadmin@tas.com',
+                'password' => Hash::make('SysAdmin@123'),
+                'email_verified_at' => now(),
+                'role' => 1, // Admin
                 'isactive' => 0,
-                'created_at' => '2024-04-25 13:15:39',
-                'updated_at' => '2024-05-31 16:27:02',
             ],
             [
-                'id' => 3,
-                'fullname' => 'Administrator TAS',
+                'fullname' => 'Mark Administrator',
                 'username' => 'mark',
                 'email' => 'mark@tas.com',
-                'password' => Crypt::encryptString('password123'),
-                'email_verified_at' => '2024-04-25 13:15:39',
-                'role' => 2,
-                'isactive' => 1,
-                'created_at' => '2024-04-25 13:15:39',
-                'updated_at' => '2024-05-08 07:27:01',
-            ],
-            [
-                'id' => 5,
-                'fullname' => 'Micah Truinfo',
-                'username' => 'micah',
-                'email' => 'micah@gmail.com',
-                'password' => Crypt::encryptString('password123'),
-                'email_verified_at' => null,
-                'role' => 2,
-                'isactive' => 1,
-                'created_at' => '2024-04-26 00:37:19',
-                'updated_at' => '2024-05-07 07:53:46',
-            ],
-            [
-                'id' => 6,
-                'fullname' => 'Germalyn Saysay',
-                'username' => 'gem123',
-                'email' => 'germalyn@gmail.com',
-                'password' => Crypt::encryptString('password123'),
-                'email_verified_at' => null,
-                'role' => 2,
-                'isactive' => 1,
-                'created_at' => '2024-04-26 00:39:56',
-                'updated_at' => '2024-05-07 01:35:41',
-            ],
-            [
-                'id' => 7,
-                'fullname' => 'Joven Cordeta',
-                'username' => 'joven',
-                'email' => 'joven@gmail.com',
-                'password' => Crypt::encryptString('password123'),
-                'email_verified_at' => null,
-                'role' => 2,
+                'password' => Hash::make('Mark@123'),
+                'email_verified_at' => now(),
+                'role' => 1, // Admin
                 'isactive' => 0,
-                'created_at' => '2024-04-29 00:27:54',
-                'updated_at' => '2024-06-03 09:36:00',
             ],
             [
-                'id' => 9,
-                'fullname' => 'Mac Mac The Pogi',
-                'username' => 'markcalleja',
-                'email' => 'markcalleja@gmail.com',
-                'password' => Crypt::encryptString('password123'),
-                'email_verified_at' => null,
-                'role' => 2,
-                'isactive' => 1,
-                'created_at' => '2024-04-29 00:43:30',
-                'updated_at' => '2024-04-29 00:54:56',
+                'fullname' => 'Regular User',
+                'username' => 'user',
+                'email' => 'user@tas.com',
+                'password' => Hash::make('User@123'),
+                'email_verified_at' => now(),
+                'role' => 0, // Regular User
+                'isactive' => 0,
             ],
             [
-                'id' => 10,
-                'fullname' => 'OJT JICO',
-                'username' => 'jico',
-                'email' => 'jekjek@tas.com',
-                'password' => Crypt::encryptString('password123'),
-                'email_verified_at' => null,
-                'role' => 2,
-                'isactive' => 1,
-                'created_at' => '2024-05-05 17:03:52',
-                'updated_at' => '2024-05-17 08:43:20',
-            ],
-            [
-                'id' => 11,
-                'fullname' => 'Jdc E',
-                'username' => 'Jdc E',
-                'email' => 'JDC@gmail.com',
-                'password' => Crypt::encryptString('password123'),
-                'email_verified_at' => null,
-                'role' => 0,
-                'isactive' => 1,
-                'created_at' => '2024-05-10 02:37:54',
-                'updated_at' => '2024-05-10 02:38:06',
+                'fullname' => 'Test User',
+                'username' => 'testuser',
+                'email' => 'test@tas.com',
+                'password' => Hash::make('Test@123'),
+                'email_verified_at' => now(),
+                'role' => 0, // Regular User
+                'isactive' => 0,
             ],
         ];
 
-        // Insert each user into the users table
-        foreach ($users as $user) {
-            DB::table('users')->insert($user);
+        // Insert each user
+        foreach ($users as $userData) {
+            User::create($userData);
         }
+
+        $this->command->info('Users seeded successfully!');
+        $this->command->info('');
+        $this->command->info('Default Credentials:');
+        $this->command->info('Super Admin - Username: admin, Password: Admin@123');
+        $this->command->info('Admin - Username: sysadmin, Password: SysAdmin@123');
+        $this->command->info('Admin - Username: mark, Password: Mark@123');
+        $this->command->info('User - Username: user, Password: User@123');
+        $this->command->info('Test User - Username: testuser, Password: Test@123');
+        $this->command->info('');
+        $this->command->warn('⚠️  IMPORTANT: Change these passwords immediately after first login!');
     }
 }
